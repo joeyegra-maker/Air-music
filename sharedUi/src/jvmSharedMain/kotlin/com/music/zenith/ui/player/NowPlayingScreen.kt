@@ -4234,7 +4234,7 @@ fun NowPlayingScreen(
                             ).coerceAtLeast(0.dp)
                         val cardTitleDrop =
                             (if (!heroMode && !videoMode && !lyricStripEnabled && !titleSeparate) CARD_TITLE_DROP else 0.dp) +
-                                (if (videoMode) 0.dp else ControlLayoutTuning.titleExtra(hideVolumeBar, lyricStripEnabled))
+                                ControlLayoutTuning.titleExtra(hideVolumeBar, lyricStripEnabled)
                         val titleHeroDrop = if (titleSeparate) 0.dp else heroTitleDrop
                         // Setelah tulisan "Lyrics not available" memudar, slot barisnya
                         // kosong. Judul, artis, like, dan menu turun halus mengisi ruang
