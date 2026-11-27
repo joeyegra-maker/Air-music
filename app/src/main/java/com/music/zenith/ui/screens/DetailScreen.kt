@@ -169,6 +169,7 @@ import com.music.zenith.data.canvas.AppleArtistArtRepository
 import com.music.zenith.data.canvas.releaseDateText
 import com.music.zenith.data.canvas.appleCatalogue
 import com.music.zenith.data.canvas.AlbumLogo
+import com.music.zenith.data.canvas.AlbumLogoPaperTransformation
 import com.music.zenith.data.canvas.AlbumLogoRepository
 import com.music.zenith.data.canvas.ArtistSignature
 import com.music.zenith.data.canvas.ArtistSignatureRepository
@@ -1888,6 +1889,7 @@ private fun AlbumTitleLogo(
                 size(SVG_DECODE_WIDTH, (SVG_DECODE_WIDTH / aspect).roundToInt())
             } else {
                 size(coil3.size.Size.ORIGINAL)
+                transformations(AlbumLogoPaperTransformation)
             }
         }.build()
     }
