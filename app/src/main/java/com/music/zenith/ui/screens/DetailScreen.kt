@@ -18,6 +18,11 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import com.music.zenith.ui.components.GLASS_JELLY_PRESS_WIDE
 import com.music.zenith.ui.components.glassJelly
@@ -736,7 +741,7 @@ fun DetailScreen(
                 ) {
             item(key = "header") {
                 if (isArtist) {
-                    ArtistHeader(page = page, palette = palette, artHeight = artHeight, appleArt = appleArt, signature = signature)
+                    ArtistHeader(page = page, palette = palette, artHeight = artHeight, appleArt = appleArt, remoteSignature = signature)
                 } else {
                     ReleaseHeader(
                         page = page,
@@ -1757,9 +1762,47 @@ private fun ArtistHeader(
     palette: ArtworkPalette,
     artHeight: Dp,
     appleArt: AppleArtistArt?,
-    signature: ArtistSignature?,
+    remoteSignature: ArtistSignature?,
 ) {
-    Box(Modifier.fillMaxWidth()) {
+    val localHtml by AppSettings.artistHtmlLogos.collectAsStateWithLifecycle()
+    val signature = localHtml[AppSettings.artistHtmlLogoKey(page.title)]?.let { html ->
+        ArtistSignature(imageUrl = "html:" + html.hashCode(), aspect = 3f, format = "html", html = html)
+    } ?: remoteSignature
+    var showHtmlDialog by remember { mutableStateOf(false) }
+    if (showHtmlDialog) {
+        var draft by remember {
+            mutableStateOf(localHtml[AppSettings.artistHtmlLogoKey(page.title)].orEmpty())
+        }
+        AlertDialog(
+            onDismissRequest = { showHtmlDialog = false },
+            title = { Text("HTML logo: ${page.title}") },
+            text = {
+                OutlinedTextField(
+                    value = draft,
+                    onValueChange = { draft = it },
+                    placeholder = { Text("Paste kode HTML/CSS di sini") },
+                    modifier = Modifier.fillMaxWidth().height(220.dp),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    AppSettings.setArtistHtmlLogo(page.title, draft)
+                    showHtmlDialog = false
+                }) { Text("Simpan") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    AppSettings.setArtistHtmlLogo(page.title, "")
+                    showHtmlDialog = false
+                }) { Text("Hapus") }
+            },
+        )
+    }
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .pointerInput(Unit) { detectTapGestures(onLongPress = { showHtmlDialog = true }) },
+    ) {
         Spacer(Modifier.fillMaxWidth().height(artHeight + HEADER_DROP - ARTIST_HEADER_LIFT))
         // Animated HTML logos are curated per artist, so they win over Apple's
         // title logo; every other signature stays secondary to it.
