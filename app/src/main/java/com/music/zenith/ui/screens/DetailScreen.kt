@@ -1761,8 +1761,9 @@ private fun ArtistHeader(
 ) {
     Box(Modifier.fillMaxWidth()) {
         Spacer(Modifier.fillMaxWidth().height(artHeight + HEADER_DROP - ARTIST_HEADER_LIFT))
-        val logoUrl = appleArt?.logoUrl
-        // Secondary provider: drawn only when Apple has no title logo.
+        // Animated HTML logos are curated per artist, so they win over Apple's
+        // title logo; every other signature stays secondary to it.
+        val logoUrl = appleArt?.logoUrl.takeIf { signature?.format != "html" }
         val signatureUrl = signature?.imageUrl.takeIf { logoUrl == null }
         val imageUrl = logoUrl ?: signatureUrl
         // Signature vectors are dark ink on transparency — over a dark artist
