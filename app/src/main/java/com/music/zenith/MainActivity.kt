@@ -3555,6 +3555,7 @@ private fun ZenithApp(
                         } else if (pageRoute == AppRoute.AiTranslate) {
                             AiTranslateScreen(
                                 onOpenDialog = { aiTranslateDialog = it },
+                                onOpenLanguage = { showTranslationLanguage = true },
                                 contentPadding = listPadding,
                             )
                         } else if (pageRoute == AppRoute.Discord) {
@@ -3660,7 +3661,6 @@ private fun ZenithApp(
                                     navigator.push(AppRoute.Replay)
                                 },
                                 onLyricsSources = { showLyricsSources = true },
-                                onTranslationLanguage = { showTranslationLanguage = true },
                                 onAiTranslate = { navigator.push(AppRoute.AiTranslate) },
                                 onSources = { navigator.push(AppRoute.Sources) },
                                 onListenTogether = { navigator.push(AppRoute.ListenTogether) },
@@ -4512,7 +4512,7 @@ private fun ZenithApp(
                         AppRoute.Spotify -> stringResource(R.string.spotify)
                         AppRoute.Downloads -> stringResource(R.string.downloads)
                         AppRoute.Discord -> "Discord"
-                        AppRoute.AiTranslate -> stringResource(R.string.ai_translate)
+                        AppRoute.AiTranslate -> stringResource(R.string.translation_language)
                         AppRoute.History -> stringResource(R.string.history)
                         is AppRoute.LibraryShowAll -> route.shelf.title
                         is AppRoute.ArtistShelf -> route.shelf.title
@@ -4554,7 +4554,7 @@ private fun ZenithApp(
                                 com.music.zenith.ui.screens.settingsChoiceBarTitle(route.choice)
                             AppRoute.AccountScrobbling -> stringResource(R.string.bar_title_account)
                             AppRoute.Discord -> stringResource(R.string.discord)
-                            AppRoute.AiTranslate -> stringResource(R.string.ai_translate)
+                            AppRoute.AiTranslate -> stringResource(R.string.translation_language)
                             AppRoute.Equalizer -> stringResource(R.string.equalizer)
                             AppRoute.EqualizerPresets -> stringResource(R.string.equalizer_preset)
                             AppRoute.ListenTogether -> stringResource(R.string.listen_together)

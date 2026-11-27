@@ -621,6 +621,10 @@
     <string name="ai_model_retry">Try again</string>
     <string name="ai_model_none">No model matches</string>
     <string name="ai_provider_get_key">Get a key at %1$s</string>
+    <string name="translation_target">Target language</string>
+    <string name="ai_translate_providers">Providers</string>
+    <string name="ai_translate_providers_subtitle">Switch, API keys and model for each provider</string>
+    <string name="ai_provider_pick">Provider</string>
     <string name="search_languages">Search languages</string>
     <string name="no_languages_match">No languages match</string>
     <string name="connect_account_first">Connect an account first</string>

@@ -1302,6 +1302,14 @@
 
     <string name="ai_provider_get_key">Dapatkan key di %1$s</string>
 
+    <string name="translation_target">Bahasa tujuan</string>
+
+    <string name="ai_translate_providers">Provider</string>
+
+    <string name="ai_translate_providers_subtitle">Aktif, API key, dan model tiap provider</string>
+
+    <string name="ai_provider_pick">Provider</string>
+
     <string name="search_languages">Cari bahasa</string>
 
     <string name="no_languages_match">Tidak ada bahasa yang cocok</string>

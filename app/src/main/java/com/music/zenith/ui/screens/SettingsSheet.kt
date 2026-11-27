@@ -213,7 +213,6 @@ fun SettingsScreen(
     onEqualizer: () -> Unit,
     onOpenReplay: () -> Unit,
     onLyricsSources: () -> Unit,
-    onTranslationLanguage: () -> Unit,
     onAiTranslate: () -> Unit,
     onSources: () -> Unit,
     onListenTogether: () -> Unit,
@@ -1990,7 +1989,7 @@ fun SettingsScreen(
                     )
                 }
                 val translationLanguageTitle = stringResource(R.string.translation_language)
-                row(translationLanguageTitle, "lyrics", "translate") {
+                row(translationLanguageTitle, "lyrics", "translate", "ai", "gemini", "groq", "openrouter") {
                     SettingsRow(
                         icon = SfIcons.Translate,
                         title = translationLanguageTitle,
@@ -2003,19 +2002,10 @@ fun SettingsScreen(
                             )
                         },
                         trailing = { Chevron() },
-                        onClick = onTranslationLanguage,
-                    )
-                }
-                val aiTranslateTitle = stringResource(R.string.ai_translate)
-                row(aiTranslateTitle, "lyrics", "translate", "ai", "gemini", "groq", "openrouter") {
-                    SettingsRow(
-                        icon = SfIcons.AutoAwesome,
-                        title = aiTranslateTitle,
-                        subtitle = stringResource(R.string.ai_translate_subtitle),
-                        trailing = { Chevron() },
                         onClick = onAiTranslate,
                     )
                 }
+
             }
             val canvasLiveBlurTitle = stringResource(R.string.canvas_live_blur_panels)
             row(canvasLiveBlurTitle, "canvas", "blur", "lyrics", "queue", "player") {
