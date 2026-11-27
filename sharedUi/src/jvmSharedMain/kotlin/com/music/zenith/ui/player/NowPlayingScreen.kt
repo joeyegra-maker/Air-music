@@ -694,6 +694,9 @@ private const val CANVAS_PANEL_DIM = 0.35f
 /** How far the static card cover trails the panel's progress while docking; 1 = in step, higher = more gap. */
 private const val DOCK_CARD_LAG = 1.25f
 
+/** Share of the dock travel after which a music video's picture fades in over the flying still. */
+private const val VIDEO_HANDOFF_FROM = 0.88f
+
 /**
  * Jarak antara kaki cover terbang (tanpa canvas) dan tepi bawah panel selagi
  * panel di-drag. Jarak ini tumbuh dari 0 di mini player sampai penuh pada
@@ -4607,12 +4610,12 @@ fun NowPlayingScreen(
                         // each at least as far along as this progress, so the cover is
                         // inside the panel on every frame by construction: no clamps, no
                         // bow, no lift, and it keeps its square shape. Opening and
-                        // closing take the same path. Banner, video and the lyrics/queue
-                        // thumbnail keep the earlier path.
+                        // closing take the same path. A music video's picture box takes it
+                        // too; banner and the lyrics/queue thumbnail keep the earlier path.
                         fun dockedRect(rect: Rect, mini: Rect?): Rect {
                             if (mini == null) return rect
                             val anchor = dockFrame.anchor
-                            if (dock == null || anchor == null || heroMode || videoMode ||
+                            if (dock == null || anchor == null || heroMode ||
                                 p() > 0f || bannerShare() > 0f
                             ) {
                                 return fitToPanel(towardsDock(rect, mini), true)
@@ -4635,6 +4638,14 @@ fun NowPlayingScreen(
                         }
                         // The banner's dissolve, firmed up into the cover's hard edge as
                         // it docks.
+                        // How far the music video's picture has taken over from the
+                        // flying still, over the last stretch of the dock.
+                        fun videoHandoff(): Float {
+                            if (!videoMode || p() > 0f) return 0f
+                            return smootherStep(
+                                ((dockT() - VIDEO_HANDOFF_FROM) / (1f - VIDEO_HANDOFF_FROM)).coerceIn(0f, 1f),
+                            )
+                        }
                         fun sleeveShown(): Float = bannerShown() * dockEase(dockT())
                         fun sleeveCorner(): Dp {
                             val corner = 8.dp * (1f - sleeveShown())
@@ -4776,7 +4787,11 @@ fun NowPlayingScreen(
                                         // picture box stands in, still frame first.
                                         // The sleeve is only the collapsed header's
                                         // thumbnail, and what flies to the mini player.
-                                        (if (!videoMode || docking()) 1f else (p() * 2f - 1f).coerceIn(0f, 1f))
+                                        (
+                                            if (!videoMode) 1f
+                                            else if (docking()) 1f - videoHandoff()
+                                            else (p() * 2f - 1f).coerceIn(0f, 1f)
+                                        )
                                 }
                                 .graphicsLayer {
                                     val shown = sleeveShown()
@@ -5330,7 +5345,7 @@ fun NowPlayingScreen(
                         // is the still sleeve, and for the trip to the mini player,
                         // which takes the picture over.
                         if (videoMode) {
-                            WhileShown({ !collapsePastHalf && !docking() }) {
+                            WhileShown({ !collapsePastHalf && (!docking() || videoHandoff() > 0f) }) {
                                 val videoAspect by PlayerPlatform.host.musicVideoAspect
                                     .collectAsStateWithLifecycle()
                                 val aspect = videoAspect.coerceIn(1f, 2.4f)
@@ -5364,7 +5379,8 @@ fun NowPlayingScreen(
                                             }
                                         }
                                         .graphicsLayer {
-                                            alpha = (1f - p() * 2f).coerceIn(0f, 1f)
+                                            alpha = (1f - p() * 2f).coerceIn(0f, 1f) *
+                                                (if (docking()) videoHandoff() else 1f)
                                             translationX = swipeSettle.value * (1f - p())
                                         },
                                 ) {
