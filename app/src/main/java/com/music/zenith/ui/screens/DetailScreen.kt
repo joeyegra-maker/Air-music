@@ -18,11 +18,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.TextButton
-import androidx.compose.ui.input.pointer.pointerInput
+
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import com.music.zenith.ui.components.GLASS_JELLY_PRESS_WIDE
 import com.music.zenith.ui.components.glassJelly
@@ -741,7 +737,7 @@ fun DetailScreen(
                 ) {
             item(key = "header") {
                 if (isArtist) {
-                    ArtistHeader(page = page, palette = palette, artHeight = artHeight, appleArt = appleArt, remoteSignature = signature)
+                    ArtistHeader(page = page, palette = palette, artHeight = artHeight, appleArt = appleArt, signature = signature)
                 } else {
                     ReleaseHeader(
                         page = page,
@@ -1762,51 +1758,12 @@ private fun ArtistHeader(
     palette: ArtworkPalette,
     artHeight: Dp,
     appleArt: AppleArtistArt?,
-    remoteSignature: ArtistSignature?,
+    signature: ArtistSignature?,
 ) {
-    val localHtml by AppSettings.artistHtmlLogos.collectAsStateWithLifecycle()
-    val signature = localHtml[AppSettings.artistHtmlLogoKey(page.title)]?.let { html ->
-        ArtistSignature(imageUrl = "html:" + html.hashCode(), aspect = 2.4f, format = "html", html = html)
-    } ?: remoteSignature
-    var showHtmlDialog by remember { mutableStateOf(false) }
-    if (showHtmlDialog) {
-        var draft by remember {
-            mutableStateOf(localHtml[AppSettings.artistHtmlLogoKey(page.title)].orEmpty())
-        }
-        AlertDialog(
-            onDismissRequest = { showHtmlDialog = false },
-            title = { Text("HTML logo: ${page.title}") },
-            text = {
-                OutlinedTextField(
-                    value = draft,
-                    onValueChange = { draft = it },
-                    placeholder = { Text("Paste kode HTML/CSS di sini") },
-                    modifier = Modifier.fillMaxWidth().height(220.dp),
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    AppSettings.setArtistHtmlLogo(page.title, draft)
-                    showHtmlDialog = false
-                }) { Text("Simpan") }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    AppSettings.setArtistHtmlLogo(page.title, "")
-                    showHtmlDialog = false
-                }) { Text("Hapus") }
-            },
-        )
-    }
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .pointerInput(Unit) { detectTapGestures(onLongPress = { showHtmlDialog = true }) },
-    ) {
+    Box(Modifier.fillMaxWidth()) {
         Spacer(Modifier.fillMaxWidth().height(artHeight + HEADER_DROP - ARTIST_HEADER_LIFT))
-        // Animated HTML logos are curated per artist, so they win over Apple's
-        // title logo; every other signature stays secondary to it.
-        val logoUrl = appleArt?.logoUrl.takeIf { signature?.format != "html" }
+        val logoUrl = appleArt?.logoUrl
+        // Secondary provider: drawn only when Apple has no title logo.
         val signatureUrl = signature?.imageUrl.takeIf { logoUrl == null }
         val imageUrl = logoUrl ?: signatureUrl
         // Signature vectors are dark ink on transparency — over a dark artist
@@ -1870,21 +1827,8 @@ private fun ArtistHeader(
                 modifier = Modifier.align(Alignment.BottomCenter).enterReveal(500),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-            val isHtmlSig = logoUrl == null && signature?.format == "html"
-            if (isHtmlSig && signature != null) {
-                LaunchedEffect(signature.imageUrl) { logoShown = true }
-                HtmlLogo(
-                    html = signature.html,
-                    aspect = aspect,
-                    onLongPress = { showHtmlDialog = true },
-                    modifier = Modifier
-                        .padding(top = 14.dp, bottom = 6.dp)
-                        .fillMaxWidth(ARTIST_LOGO_WIDTH)
-                        .aspectRatio(aspect),
-                )
-            }
             AsyncImage(
-                model = if (isHtmlSig) null else request,
+                model = request,
                 contentDescription = page.title,
                 contentScale = ContentScale.Fit,
                 colorFilter = tint,
@@ -1901,7 +1845,6 @@ private fun ArtistHeader(
                     }
                 },
                 modifier = Modifier
-                    .then(if (isHtmlSig) Modifier.size(0.dp) else Modifier)
                     .padding(top = 14.dp, bottom = if (isSignature) 6.dp else 20.dp)
                     // Sized from the incoming width in layout rather than through a
                     // BoxWithConstraints, which would subcompose the image.

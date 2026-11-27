@@ -1078,9 +1078,6 @@ object AppSettings {
     val signatureApiEnabled = MutableStateFlow(false)
     val signatureApiUrl = MutableStateFlow("")
 
-    /** Locally pasted HTML artist logos, keyed by [artistHtmlLogoKey]. */
-    val artistHtmlLogos = MutableStateFlow<Map<String, String>>(emptyMap())
-
     /**
      * Blows the player's cover art out to a full-bleed banner running off the
      * top of the screen, rather than sitting it in a square card.
@@ -1791,10 +1788,6 @@ object AppSettings {
         canvasProviderOrder.value = readCanvasProviderOrder()
         signatureApiEnabled.value = prefs.getBoolean(KEY_SIGNATURE_API_ENABLED, false)
         signatureApiUrl.value = normalizeSignatureApiUrl(prefs.getString(KEY_SIGNATURE_API_URL, "").orEmpty())
-        artistHtmlLogos.value = runCatching {
-            val obj = org.json.JSONObject(prefs.getString(KEY_ARTIST_HTML_LOGOS, "{}").orEmpty())
-            obj.keys().asSequence().associateWith { obj.getString(it) }
-        }.getOrDefault(emptyMap())
         fullBleedArtwork.value = prefs.getBoolean(KEY_FULL_BLEED_ARTWORK, true)
         canvasLiveBlurPanels.value = prefs.getBoolean(KEY_CANVAS_LIVE_BLUR_PANELS, false)
         canvasPanelDefaultBackdrop.value = prefs.getBoolean(KEY_CANVAS_PANEL_DEFAULT_BACKDROP, false)
@@ -2959,21 +2952,6 @@ object AppSettings {
         return CanvasProvider.ordered(saved)
     }
 
-    fun artistHtmlLogoKey(artist: String): String =
-        artist.lowercase(java.util.Locale.ROOT).filter { it.isLetterOrDigit() }
-
-    /** Blank [html] removes the artist's pasted logo. */
-    fun setArtistHtmlLogo(artist: String, html: String) {
-        val key = artistHtmlLogoKey(artist)
-        if (key.isEmpty()) return
-        val next = artistHtmlLogos.value.toMutableMap()
-        if (html.isBlank()) next.remove(key) else next[key] = html.trim().take(20_000)
-        artistHtmlLogos.value = next
-        prefs.edit()
-            .putString(KEY_ARTIST_HTML_LOGOS, org.json.JSONObject(next as Map<*, *>).toString())
-            .apply()
-    }
-
     fun setSignatureApiEnabled(value: Boolean) {
         signatureApiEnabled.value = value
         prefs.edit().putBoolean(KEY_SIGNATURE_API_ENABLED, value).apply()
@@ -3747,7 +3725,6 @@ object AppSettings {
     private const val KEY_CANVAS_PROVIDER_ORDER = "canvas_provider_order"
     private const val KEY_SIGNATURE_API_ENABLED = "signature_api_enabled"
     private const val KEY_SIGNATURE_API_URL = "signature_api_url"
-    private const val KEY_ARTIST_HTML_LOGOS = "artist_html_logos"
     private const val KEY_FULL_BLEED_ARTWORK = "full_bleed_artwork"
     private const val KEY_CANVAS_LIVE_BLUR_PANELS = "canvas_live_blur_panels"
     private const val KEY_CANVAS_PANEL_DEFAULT_BACKDROP = "canvas_panel_default_backdrop"
