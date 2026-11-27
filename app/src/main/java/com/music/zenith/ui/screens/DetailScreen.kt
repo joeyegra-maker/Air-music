@@ -108,6 +108,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -1332,6 +1334,15 @@ private fun ReleaseHeader(
         var logoShown by remember(albumLogo?.imageUrl) { mutableStateOf(false) }
         var logoFailed by remember(albumLogo?.imageUrl) { mutableStateOf(false) }
         val titleLogo = albumLogo.takeIf { isCatalogAlbum && !logoFailed }
+        var logoColor by remember(albumLogo?.imageUrl) {
+            mutableStateOf(albumLogo?.imageUrl?.let { LogoColors[it] })
+        }
+        // White until the logo's colour is read, and wherever there is no logo.
+        val playColor by animateColorAsState(
+            targetValue = logoColor?.takeIf { titleLogo != null } ?: Color.White,
+            animationSpec = tween(260),
+            label = "albumPlayColor",
+        )
         Box(contentAlignment = Alignment.Center) {
             if (titleLogo != null) {
                 AlbumTitleLogo(
@@ -1340,6 +1351,7 @@ private fun ReleaseHeader(
                     tint = palette.onBackground,
                     onShown = { logoShown = true },
                     onFailed = { logoFailed = true },
+                    onColor = { logoColor = it },
                     modifier = Modifier
                         .flightReveal(150, afterFlight = fullBleed)
                         .padding(horizontal = HEADER_GUTTER),
@@ -1454,6 +1466,7 @@ private fun ReleaseHeader(
                             label = stringResource(R.string.play),
                             onClick = onPlay,
                             filled = true,
+                            fillColor = playColor,
                             size = RELEASE_SIDE_BUTTON,
                             modifier = Modifier.weight(1f),
                         )
@@ -1474,6 +1487,7 @@ private fun ReleaseHeader(
                         label = stringResource(R.string.play),
                         onClick = onPlay,
                         filled = true,
+                        fillColor = playColor,
                         size = RELEASE_SIDE_BUTTON,
                         modifier = Modifier.weight(1f),
                     )
@@ -1509,6 +1523,7 @@ private fun ReleaseHeader(
                     label = stringResource(R.string.play),
                     onClick = onPlay,
                     filled = true,
+                    fillColor = playColor,
                     size = RELEASE_SIDE_BUTTON,
                     modifier = Modifier.weight(1f),
                 )
@@ -1867,6 +1882,41 @@ private fun ArtistHeader(
     }
 }
 
+/** Title logo colours already read, so a revisited album starts tinted. */
+private val LogoColors = HashMap<String, Color>()
+
+/**
+ * The dominant ink of a logo, favouring saturated colours over its white or
+ * black trim. Null when that ink is too dark to fill a button on a dark page.
+ */
+private fun logoColorOf(bitmap: androidx.compose.ui.graphics.ImageBitmap): Color? {
+    val pixels = bitmap.toPixelMap()
+    val step = (maxOf(pixels.width, pixels.height) / 160).coerceAtLeast(1)
+    val buckets = HashMap<Int, MutableList<Color>>()
+    for (y in 0 until pixels.height step step) {
+        for (x in 0 until pixels.width step step) {
+            val color = pixels[x, y]
+            if (color.alpha < 0.9f) continue
+            val key = ((color.red * 15).toInt() shl 8) or
+                ((color.green * 15).toInt() shl 4) or
+                (color.blue * 15).toInt()
+            buckets.getOrPut(key) { mutableListOf() }.add(color)
+        }
+    }
+    val best = buckets.values.maxByOrNull { colors ->
+        val first = colors.first()
+        val chroma = maxOf(first.red, first.green, first.blue) -
+            minOf(first.red, first.green, first.blue)
+        colors.size * (0.25f + chroma)
+    } ?: return null
+    val ink = Color(
+        red = best.map { it.red }.average().toFloat(),
+        green = best.map { it.green }.average().toFloat(),
+        blue = best.map { it.blue }.average().toFloat(),
+    )
+    return ink.takeIf { it.luminance() >= 0.08f }
+}
+
 /**
  * An album's title logo in place of its name. Vectors are tinted with the
  * page's text colour (dark ink would vanish on a dark page); rasters keep
@@ -1881,8 +1931,11 @@ private fun AlbumTitleLogo(
     onShown: () -> Unit,
     onFailed: () -> Unit,
     modifier: Modifier = Modifier,
+    /** The logo's own colour, once read; never called for a tinted vector. */
+    onColor: (Color?) -> Unit = {},
 ) {
     val context = LocalPlatformContext.current
+    var shownImage by remember(logo.imageUrl) { mutableStateOf<coil3.Image?>(null) }
     var attempt by remember(logo.imageUrl) { mutableIntStateOf(0) }
     var failed by remember(logo.imageUrl) { mutableStateOf(false) }
     val isSvg = logo.format == "svg"
@@ -1894,6 +1947,7 @@ private fun AlbumTitleLogo(
             } else {
                 size(coil3.size.Size.ORIGINAL)
                 transformations(AlbumLogoPaperTransformation)
+                forPixelAccess()
             }
         }.build()
     }
@@ -1907,6 +1961,16 @@ private fun AlbumTitleLogo(
             onFailed()
         }
     }
+    LaunchedEffect(shownImage) {
+        val image = shownImage ?: return@LaunchedEffect
+        // A vector is drawn in the page's text colour, so it has none of its own.
+        if (isSvg) return@LaunchedEffect
+        val color = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            logoColorOf(image.toImageBitmap())
+        }
+        if (color != null) LogoColors[logo.imageUrl] = color
+        onColor(color)
+    }
     AsyncImage(
         model = request,
         contentDescription = title,
@@ -1914,7 +1978,10 @@ private fun AlbumTitleLogo(
         colorFilter = if (isSvg) ColorFilter.tint(tint) else null,
         onState = { state ->
             when (state) {
-                is AsyncImagePainter.State.Success -> onShown()
+                is AsyncImagePainter.State.Success -> {
+                    shownImage = state.result.image
+                    onShown()
+                }
                 is AsyncImagePainter.State.Error -> failed = true
                 else -> Unit
             }
@@ -2225,11 +2292,18 @@ private fun ActionPill(
     filled: Boolean,
     modifier: Modifier = Modifier,
     size: Dp = 50.dp,
+    /** The fill of a [filled] pill. */
+    fillColor: Color = Color.White,
 ) {
     // Resume rather than a flat tap: both start a queue, and the rising pair
     // says so.
     val haptics = rememberHaptics()
-    val content = if (filled) Color.Black else MaterialTheme.colorScheme.onSurface
+    // Black on a light fill, white on a deep one.
+    val content = when {
+        !filled -> MaterialTheme.colorScheme.onSurface
+        fillColor.luminance() > 0.18f -> Color.Black
+        else -> Color.White
+    }
     // Label mengecil bertahap bila tidak muat (font sistem besar, pil sempit).
     var fontScale by remember(label) { mutableFloatStateOf(1f) }
     Row(
@@ -2239,7 +2313,7 @@ private fun ActionPill(
             .clip(CircleShape)
             .then(
                 if (filled) {
-                    Modifier.background(Color.White)
+                    Modifier.background(fillColor)
                 } else {
                     Modifier
                         .background(Color.White.copy(alpha = LIGHT_FILL_ALPHA), CircleShape)
