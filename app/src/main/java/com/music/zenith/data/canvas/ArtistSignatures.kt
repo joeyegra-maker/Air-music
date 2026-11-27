@@ -29,6 +29,8 @@ data class ArtistSignature(
     val aspect: Float,
     /** Lowercased asset format (`svg`, `png`, …); "" when unknown. */
     val format: String = "",
+    /** Inline HTML for animated community signatures; non-empty only when [format] is `html`. */
+    val html: String = "",
 )
 
 /**
@@ -156,6 +158,15 @@ object ArtistSignatureRepository {
         var bestArea = -1L
         for (i in 0 until signatures.length()) {
             val sig = signatures.optJSONObject(i) ?: continue
+            val inlineHtml = sig.optString("html").takeIf { it.isNotBlank() }
+            if (inlineHtml != null) {
+                return ArtistSignature(
+                    imageUrl = "html:" + inlineHtml.hashCode(),
+                    aspect = extractAspect(sig),
+                    format = "html",
+                    html = inlineHtml,
+                )
+            }
             val url = extractUrl(sig) ?: continue
             val score = rank(sig, url)
             // Resolution only breaks ties: a larger raster of the same rank

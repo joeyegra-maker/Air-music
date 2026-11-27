@@ -1826,8 +1826,19 @@ private fun ArtistHeader(
                 modifier = Modifier.align(Alignment.BottomCenter).enterReveal(500),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
+            val isHtmlSig = logoUrl == null && signature?.format == "html"
+            if (isHtmlSig && signature != null) {
+                LaunchedEffect(signature.imageUrl) { logoShown = true }
+                HtmlLogo(
+                    html = signature.html,
+                    modifier = Modifier
+                        .padding(top = 14.dp, bottom = 6.dp)
+                        .fillMaxWidth(ARTIST_LOGO_WIDTH * SIGNATURE_SCALE)
+                        .aspectRatio(aspect),
+                )
+            }
             AsyncImage(
-                model = request,
+                model = if (isHtmlSig) null else request,
                 contentDescription = page.title,
                 contentScale = ContentScale.Fit,
                 colorFilter = tint,
@@ -1844,6 +1855,7 @@ private fun ArtistHeader(
                     }
                 },
                 modifier = Modifier
+                    .then(if (isHtmlSig) Modifier.size(0.dp) else Modifier)
                     .padding(top = 14.dp, bottom = if (isSignature) 6.dp else 20.dp)
                     // Sized from the incoming width in layout rather than through a
                     // BoxWithConstraints, which would subcompose the image.
