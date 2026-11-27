@@ -111,7 +111,11 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -2563,6 +2567,23 @@ private fun AlbumInfoFooter(
     }
 }
 
+private val ABOUT_URL = Regex("""https?://[^\s<>"]+""")
+
+/** Turns every URL in [text] into a link that opens in the browser. */
+private fun linkedText(text: String, color: Color): AnnotatedString = buildAnnotatedString {
+    append(text)
+    val styles = TextLinkStyles(SpanStyle(color = color, textDecoration = TextDecoration.Underline))
+    ABOUT_URL.findAll(text).forEach { match ->
+        var url = match.value.trimEnd('.', ',', ';', ':', '!', '?', '\'')
+        // A closing bracket belongs to the URL only if the URL opened it.
+        while (url.endsWith(")") && url.count { it == ')' } > url.count { it == '(' }) {
+            url = url.dropLast(1).trimEnd('.', ',')
+        }
+        val start = match.range.first
+        addLink(LinkAnnotation.Url(url, styles), start, start + url.length)
+    }
+}
+
 @Composable
 private fun AboutSection(
     title: String,
@@ -2578,6 +2599,9 @@ private fun AboutSection(
 ) {
     var expanded by remember(text) { mutableStateOf(false) }
     var clipped by remember(text) { mutableStateOf(false) }
+    val linked = remember(text, palette.onBackground) {
+        linkedText(text.orEmpty(), palette.onBackground)
+    }
     Column {
         if (!compact) Text(
             text = title,
@@ -2601,7 +2625,7 @@ private fun AboutSection(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(
-                    text = text,
+                    text = linked,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     color = palette.onBackgroundVariant,
@@ -2621,7 +2645,7 @@ private fun AboutSection(
             }
         }
         if (text != null && !compact) Text(
-            text = text,
+            text = linked,
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Medium,
             color = palette.onBackgroundVariant,
