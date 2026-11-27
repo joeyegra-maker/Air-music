@@ -1766,7 +1766,7 @@ private fun ArtistHeader(
 ) {
     val localHtml by AppSettings.artistHtmlLogos.collectAsStateWithLifecycle()
     val signature = localHtml[AppSettings.artistHtmlLogoKey(page.title)]?.let { html ->
-        ArtistSignature(imageUrl = "html:" + html.hashCode(), aspect = 3f, format = "html", html = html)
+        ArtistSignature(imageUrl = "html:" + html.hashCode(), aspect = 2.4f, format = "html", html = html)
     } ?: remoteSignature
     var showHtmlDialog by remember { mutableStateOf(false) }
     if (showHtmlDialog) {
@@ -1875,9 +1875,10 @@ private fun ArtistHeader(
                 LaunchedEffect(signature.imageUrl) { logoShown = true }
                 HtmlLogo(
                     html = signature.html,
+                    onLongPress = { showHtmlDialog = true },
                     modifier = Modifier
                         .padding(top = 14.dp, bottom = 6.dp)
-                        .fillMaxWidth(ARTIST_LOGO_WIDTH * SIGNATURE_SCALE)
+                        .fillMaxWidth(ARTIST_LOGO_WIDTH)
                         .aspectRatio(aspect),
                 )
             }
