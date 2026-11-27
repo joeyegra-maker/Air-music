@@ -20,14 +20,15 @@ private const val LOGO_CSP =
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun HtmlLogo(html: String, modifier: Modifier = Modifier, onLongPress: () -> Unit = {}) {
+fun HtmlLogo(html: String, modifier: Modifier = Modifier, aspect: Float = 2.4f, onLongPress: () -> Unit = {}) {
     val longPress = rememberUpdatedState(onLongPress)
-    val page = remember(html) {
+    val page = remember(html, aspect) {
         "<!doctype html><html><head><meta charset=\"utf-8\">$LOGO_CSP" +
             "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">" +
-            "<style>html,body{margin:0;width:100%;height:100%;background:transparent;overflow:hidden}" +
+            "<style>html,body{margin:0;width:100%;background:transparent;overflow:hidden}" +
             "*{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}</style>" +
-            "</head><body>$html</body></html>"
+            "</head><body><div style=\"position:relative;width:100vw;" +
+            "height:${"%.2f".format(java.util.Locale.US, 100f / aspect)}vw;overflow:hidden\">$html</div></body></html>"
     }
     AndroidView(
         modifier = modifier,

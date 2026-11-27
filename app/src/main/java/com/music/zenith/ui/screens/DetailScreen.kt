@@ -1875,6 +1875,7 @@ private fun ArtistHeader(
                 LaunchedEffect(signature.imageUrl) { logoShown = true }
                 HtmlLogo(
                     html = signature.html,
+                    aspect = aspect,
                     onLongPress = { showHtmlDialog = true },
                     modifier = Modifier
                         .padding(top = 14.dp, bottom = 6.dp)
