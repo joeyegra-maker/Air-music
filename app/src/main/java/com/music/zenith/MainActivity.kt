@@ -1893,11 +1893,9 @@ private fun ZenithApp(
     suspend fun switchToPicture(song: Song) {
         val c = controller ?: return
         if (c.currentMediaItem?.mediaId != song.videoId || song.isVideo) return
-        // "Covers, not video" leaves no surface to draw on: the old swap it is.
-        if (AppSettings.stillVideoCovers.value) {
-            switchToVideo(song, pauseWhileResolving = false)
-            return
-        }
+        // A manual switch to the video version always shows the picture, even
+        // with "Cover instead of video" on: that setting only covers videos
+        // that start on their own.
         val video = runCatching { YtMusicRepository.resolveVideo(song) }.getOrNull()
         val stillCurrent = c.currentMediaItem?.mediaId == song.videoId
         if (video == null || video.videoId == song.videoId) {

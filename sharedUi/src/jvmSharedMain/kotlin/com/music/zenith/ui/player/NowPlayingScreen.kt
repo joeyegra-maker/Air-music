@@ -1243,8 +1243,7 @@ fun NowPlayingScreen(
     // A music video plays its own picture where the sleeve is — see
     // [MusicVideoSurface] — and takes the place of any animated cover.
     val pictureCompanions by PlayerPlatform.host.musicVideoCompanions.collectAsStateWithLifecycle()
-    val videoMode = showsMusicVideo(song) ||
-        (PlayerPlatform.host.musicVideoSupported && song.videoId in pictureCompanions)
+    val videoMode = showsMusicVideo(song) || song.videoId in pictureCompanions
     // Square video covers: the picture takes the sleeve's own slot, cropped to
     // it, instead of the full-width box at the video's shape.
     val squareVideo = videoMode && VideoThumbnails.square
