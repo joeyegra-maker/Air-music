@@ -59,6 +59,10 @@ class ZenithApplication : Application(), SingletonImageLoader.Factory, Configura
     @kotlin.OptIn(ExperimentalComposeUiApi::class)
     override fun onCreate() {
         super.onCreate()
+        // CrashActivity hidup di proses ":crash" yang sengaja ringan; inisialisasi
+        // app tidak boleh dijalankan di sana.
+        if (CrashReporter.isCrashProcess()) return
+        CrashReporter.install(this)
         AppIcon.repairLauncher(this)
         // The player is drawn by the shared UI module; this is what it reads
         // underneath — settings, the Canvas decoder, outputs, the party.
