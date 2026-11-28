@@ -16,6 +16,7 @@ import android.os.Process
 import android.os.StatFs
 import android.os.SystemClock
 import android.view.Display
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.pm.PackageInfoCompat
 import java.io.File
 import java.io.PrintWriter
@@ -37,6 +38,7 @@ import kotlin.system.exitProcess
  */
 object CrashReporter {
     const val EXTRA_PATH = "crash_report_path"
+    const val EXTRA_LOCALES = "crash_app_locales"
 
     private const val DIR = "crash"
     private const val MAX_FILES = 10
@@ -62,6 +64,11 @@ object CrashReporter {
                         app.startActivity(
                             Intent(app, CrashActivity::class.java)
                                 .putExtra(EXTRA_PATH, file.absolutePath)
+                                // Sebelum Android 13, bahasa pilihan di app tidak ikut ke proses ":crash".
+                                .putExtra(
+                                    EXTRA_LOCALES,
+                                    runCatching { AppCompatDelegate.getApplicationLocales().toLanguageTags() }.getOrNull(),
+                                )
                                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK),
                         )
                         shown = true

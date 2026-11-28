@@ -6,10 +6,13 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.content.res.Configuration
+import android.content.res.Resources
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
 import android.os.Bundle
+import android.os.LocaleList
 import android.os.Process
 import android.view.Gravity
 import android.view.View
@@ -41,11 +44,25 @@ private const val COLOR_ACCENT = 0xFFFA3C55.toInt()
 class CrashActivity : Activity() {
     private var report = ""
 
+    /** Resource teks dalam bahasa yang dipilih di app. */
+    private lateinit var lang: Resources
+
+    private fun str(id: Int, vararg args: Any): String = lang.getString(id, *args)
+
+    private fun localizedResources(): Resources {
+        val tags = intent.getStringExtra(CrashReporter.EXTRA_LOCALES)
+        if (tags.isNullOrEmpty()) return resources
+        val config = Configuration(resources.configuration)
+        config.setLocales(LocaleList.forLanguageTags(tags))
+        return createConfigurationContext(config).resources
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        lang = localizedResources()
         val path = intent.getStringExtra(CrashReporter.EXTRA_PATH)
         report = runCatching { File(path.orEmpty()).readText() }
-            .getOrElse { "Laporan tidak bisa dibaca: $it" }
+            .getOrElse { str(R.string.crash_unreadable, it.toString()) }
         val root = buildUi()
         setContentView(root)
         WindowCompat.getInsetsController(window, root).apply {
@@ -101,29 +118,43 @@ class CrashActivity : Activity() {
         return lines.joinToString("\n") { it.replace("com.music.zenith.", "").take(220) }
     }
 
+    // Nilai di laporan ditulis untuk pengembang; di layar diterjemahkan lagi.
+    private fun freeOf(raw: String): String {
+        val parts = raw.split(" bebas dari ")
+        return if (parts.size == 2) str(R.string.crash_free_of, parts[0], parts[1]) else raw
+    }
+
+    private fun duration(raw: String): String =
+        if (raw.endsWith(" dtk")) str(R.string.crash_seconds, raw.removeSuffix(" dtk")) else raw
+
+    private fun networkName(raw: String): String = raw
+        .replace("Seluler", str(R.string.crash_cellular))
+        .replace("tidak ada", str(R.string.crash_none))
+        .replace("lainnya", str(R.string.crash_other))
+
     private fun deviceRows(): List<Pair<String, String>> = listOf(
-        "Ponsel" to "${value("PERANGKAT", "Pabrikan")} ${value("PERANGKAT", "Model")}",
-        "Merek / kode" to "${value("PERANGKAT", "Merek")} / ${value("PERANGKAT", "Device")}",
-        "Chipset" to value("PERANGKAT", "SoC").let { if (it == "-") value("PERANGKAT", "Hardware") else it },
-        "Arsitektur" to value("PERANGKAT", "ABI"),
-        "Android" to value("SISTEM", "Android"),
-        "Patch keamanan" to value("SISTEM", "Patch keamanan"),
-        "Build sistem" to value("SISTEM", "Build sistem"),
-        "Layar" to "${value("LAYAR", "Resolusi")}, ${value("LAYAR", "Refresh rate")}",
-        "RAM" to value("MEMORI DAN PENYIMPANAN", "RAM"),
-        "Penyimpanan" to value("MEMORI DAN PENYIMPANAN", "Penyimpanan"),
-        "Baterai" to value("BATERAI DAN JARINGAN", "Baterai"),
-        "Jaringan" to value("BATERAI DAN JARINGAN", "Jaringan"),
-        "Bahasa" to value("SISTEM", "Bahasa"),
+        str(R.string.crash_phone) to "${value("PERANGKAT", "Pabrikan")} ${value("PERANGKAT", "Model")}",
+        str(R.string.crash_brand) to "${value("PERANGKAT", "Merek")} / ${value("PERANGKAT", "Device")}",
+        str(R.string.crash_chipset) to value("PERANGKAT", "SoC").let { if (it == "-") value("PERANGKAT", "Hardware") else it },
+        str(R.string.crash_arch) to value("PERANGKAT", "ABI"),
+        str(R.string.crash_android) to value("SISTEM", "Android"),
+        str(R.string.crash_patch) to value("SISTEM", "Patch keamanan"),
+        str(R.string.crash_system_build) to value("SISTEM", "Build sistem"),
+        str(R.string.crash_screen) to "${value("LAYAR", "Resolusi")}, ${value("LAYAR", "Refresh rate")}",
+        str(R.string.crash_ram) to freeOf(value("MEMORI DAN PENYIMPANAN", "RAM")),
+        str(R.string.crash_storage) to freeOf(value("MEMORI DAN PENYIMPANAN", "Penyimpanan")),
+        str(R.string.crash_battery) to value("BATERAI DAN JARINGAN", "Baterai"),
+        str(R.string.crash_network) to networkName(value("BATERAI DAN JARINGAN", "Jaringan")),
+        str(R.string.crash_language) to value("SISTEM", "Bahasa"),
     )
 
     private fun appRows(): List<Pair<String, String>> = listOf(
-        "Versi" to value("APLIKASI", "Versi"),
-        "Jenis build" to value("APLIKASI", "Build"),
-        "Paket" to value("APLIKASI", "Paket"),
-        "Waktu crash" to header("Waktu"),
-        "Thread" to header("Thread"),
-        "Lama berjalan" to value("APLIKASI", "Umur proses"),
+        str(R.string.crash_version) to value("APLIKASI", "Versi"),
+        str(R.string.crash_build_type) to value("APLIKASI", "Build"),
+        str(R.string.crash_package) to value("APLIKASI", "Paket"),
+        str(R.string.crash_time) to header("Waktu"),
+        str(R.string.crash_thread) to header("Thread").substringBefore(" (prioritas"),
+        str(R.string.crash_uptime) to duration(value("APLIKASI", "Umur proses")),
     )
 
     private fun summaryText(): String = buildString {
@@ -213,34 +244,34 @@ class CrashActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding(pad, pad, pad, pad)
         }
-        content.addView(label("Zenith berhenti karena error", 22f, COLOR_TEXT, bold = true))
+        content.addView(label(str(R.string.crash_title), 22f, COLOR_TEXT, bold = true))
         content.addView(
             label(
-                "Salin laporan lalu kirim ke pengembang. Sertakan juga apa yang kamu lakukan sebelum crash.",
+                str(R.string.crash_subtitle),
                 13f,
                 COLOR_MUTED,
             ),
             spaced(6),
         )
 
-        card(content, "PENYEBAB") {
+        card(content, str(R.string.crash_cause)) {
             addView(label(errorType(), 17f, COLOR_ERROR, bold = true), spaced(8))
             addView(code(shortError(), COLOR_TEXT), spaced(8))
         }
         val where = location()
         if (where.isNotEmpty()) {
-            card(content, "LOKASI ERROR") { addView(code(where, COLOR_TEXT), spaced(8)) }
+            card(content, str(R.string.crash_location)) { addView(code(where, COLOR_TEXT), spaced(8)) }
         }
-        card(content, "PERANGKAT") { rows(deviceRows()) }
-        card(content, "APLIKASI") { rows(appRows()) }
-        card(content, "LAPORAN LENGKAP") {
+        card(content, str(R.string.crash_device)) { rows(deviceRows()) }
+        card(content, str(R.string.crash_app)) { rows(appRows()) }
+        card(content, str(R.string.crash_full_report)) {
             val full = code("", COLOR_TEXT).apply { visibility = View.GONE }
             lateinit var toggle: TextView
-            toggle = button("Tampilkan", COLOR_BUTTON) {
+            toggle = button(str(R.string.crash_show), COLOR_BUTTON) {
                 val show = full.visibility != View.VISIBLE
                 if (show && full.text.isEmpty()) full.text = report
                 full.visibility = if (show) View.VISIBLE else View.GONE
-                toggle.text = if (show) "Sembunyikan" else "Tampilkan"
+                toggle.text = if (show) str(R.string.crash_hide) else str(R.string.crash_show)
             }
             addView(toggle, spaced(10))
             addView(full, spaced(10))
@@ -266,13 +297,13 @@ class CrashActivity : Activity() {
             actions.addView(row, spaced(8))
         }
         actionRow(
-            button("Salin laporan", COLOR_ACCENT) { copy(report, "Laporan lengkap disalin") },
-            button("Salin ringkasan", COLOR_BUTTON) { copy(summaryText(), "Ringkasan disalin") },
+            button(str(R.string.crash_copy_report), COLOR_ACCENT) { copy(report, str(R.string.crash_copied_report)) },
+            button(str(R.string.crash_copy_summary), COLOR_BUTTON) { copy(summaryText(), str(R.string.crash_copied_summary)) },
         )
         actionRow(
-            button("Bagikan", COLOR_BUTTON) { shareReport() },
-            button("Buka ulang", COLOR_BUTTON) { restartApp() },
-            button("Tutup", COLOR_BUTTON) { finish() },
+            button(str(R.string.crash_share), COLOR_BUTTON) { shareReport() },
+            button(str(R.string.crash_restart), COLOR_BUTTON) { restartApp() },
+            button(str(R.string.crash_close), COLOR_BUTTON) { finish() },
         )
         root.addView(actions)
         return root
@@ -285,7 +316,7 @@ class CrashActivity : Activity() {
         }.onSuccess {
             Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
         }.onFailure {
-            Toast.makeText(this, "Gagal menyalin, gunakan Bagikan", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, str(R.string.crash_copy_failed), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -296,7 +327,7 @@ class CrashActivity : Activity() {
             // Dipotong supaya aman dari batas ukuran data antar proses.
             putExtra(Intent.EXTRA_TEXT, report.take(100_000))
         }
-        startActivity(Intent.createChooser(send, "Bagikan laporan"))
+        startActivity(Intent.createChooser(send, str(R.string.crash_share_title)))
     }
 
     private fun restartApp() {
