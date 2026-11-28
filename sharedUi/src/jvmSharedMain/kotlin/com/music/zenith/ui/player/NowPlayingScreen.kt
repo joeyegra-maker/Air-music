@@ -357,6 +357,9 @@ private const val SPOTIFY_HIDDEN_SCRIM_MAX_ALPHA = 0.72f
 private val SPOTIFY_MINI_SCRUBBER_LIFT = 16.dp
 private val SPOTIFY_MINI_SCRUBBER_HEIGHT = 48.dp + SPOTIFY_MINI_SCRUBBER_LIFT
 
+/** Slot satu baris lirik di atas bar progres mini; hanya dipakai bila lirik strip aktif. */
+private val SPOTIFY_MINI_LYRIC_HEIGHT = 36.dp
+
 /** [image] selebar scope, rata atas, rasio aslinya tanpa crop; yang melewati tepi bawah terpotong. */
 private fun DrawScope.drawFrameTopAligned(image: ImageBitmap) {
     if (size.width <= 0f || size.height <= 0f) return
@@ -2103,6 +2106,11 @@ fun NowPlayingScreen(
     // is nothing to show that early either.
     var heroHeight by remember { mutableStateOf(0.dp) }
     val heroTitleDrop = if (heroMode && !lyricStripEnabled) HERO_TITLE_DROP else 0.dp
+    // Tinggi blok mini saat dek Canvas disembunyikan: bar progres, ditambah satu
+    // baris lirik bila lirik strip aktif. Dipakai bersama oleh posisi judul dan
+    // blok mini supaya keduanya selalu sepakat soal ruangnya.
+    val spotifyMiniHeight = SPOTIFY_MINI_SCRUBBER_HEIGHT +
+        (if (lyricStripEnabled) SPOTIFY_MINI_LYRIC_HEIGHT else 0.dp)
     var playerBounds by remember { mutableStateOf(IntSize.Zero) }
     // The bottom of a top-aligned, contained clip in the full-player view.
     // Use measured pixels and the decoded display aspect, never screen constants.
@@ -4291,7 +4299,7 @@ fun NowPlayingScreen(
                                 ?: maxHeight
                             val collapsedTitleTop = (
                                 expandedTopHeight + spotifyCanvasDeckHeight - HEADER_HEIGHT -
-                                    SPOTIFY_MINI_SCRUBBER_HEIGHT
+                                    spotifyMiniHeight
                             ).coerceAtLeast(0.dp)
                             collapsedTitleTop
                         } else {
@@ -5945,29 +5953,62 @@ Spacer(Modifier.width(12.dp))
                                         placeable.place(0, slot - placeable.height)
                                     }
                                 }
-                                .height(SPOTIFY_MINI_SCRUBBER_HEIGHT)
+                                .height(spotifyMiniHeight)
                                 .padding(bottom = SPOTIFY_MINI_SCRUBBER_LIFT)
                                 .graphicsLayer { alpha = (1f - playerDeckReveal.value) * deckDockFade() },
                             contentAlignment = Alignment.BottomCenter,
                         ) {
-                            PlayerScrubber(
-                                shown = shown,
-                                durationMs = durationMs,
-                                loading = versionSwitching,
-                                mixing = mixing && !scrub.scrubbing,
-                                transitionWindow = miniTransitionWindow
-                                    ?.takeIf { !scrub.scrubbing && it.end > it.start }
-                                    ?.let { it.start..it.end },
-                                onScrub = onScrub,
-                                onScrubFinished = onScrubFinished,
-                            ) {
-                                PlaybackQualityLabel(
-                                    song = song,
-                                    isLoading = isLoading,
+                            Column(modifier = Modifier.fillMaxSize()) {
+                                // Lirik tetap terlihat di bawah judul saat dek disembunyikan.
+                                // Slotnya tetap setinggi SPOTIFY_MINI_LYRIC_HEIGHT, jadi
+                                // pergantian baris tidak menggeser judul maupun bar progres.
+                                if (lyricStripEnabled) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(SPOTIFY_MINI_LYRIC_HEIGHT),
+                                        contentAlignment = Alignment.BottomCenter,
+                                    ) {
+                                        CurrentLyricStrip(
+                                            lines = lyricsTranslation.displayedLyrics,
+                                            trackKey = song.videoId,
+                                            playhead = lyricsPlayhead,
+                                            isPlaying = isPlaying && position.advancing,
+                                            durationMs = durationMs,
+                                            lyricsUnavailable = lyricsUnavailable,
+                                            loadingText = lyricsLoadingText,
+                                            // Tidak membuka panel lirik. Tap hanya memunculkan
+                                            // kembali dek kontrol, seperti tap di Canvas.
+                                            onClick = { spotifyCanvasControlsOpen = true },
+                                        )
+                                    }
+                                }
+                                Box(
                                     modifier = Modifier
-                                        .align(Alignment.Center)
-                                        .padding(horizontal = 8.dp),
-                                )
+                                        .fillMaxWidth()
+                                        .weight(1f),
+                                    contentAlignment = Alignment.BottomCenter,
+                                ) {
+                                    PlayerScrubber(
+                                        shown = shown,
+                                        durationMs = durationMs,
+                                        loading = versionSwitching,
+                                        mixing = mixing && !scrub.scrubbing,
+                                        transitionWindow = miniTransitionWindow
+                                            ?.takeIf { !scrub.scrubbing && it.end > it.start }
+                                            ?.let { it.start..it.end },
+                                        onScrub = onScrub,
+                                        onScrubFinished = onScrubFinished,
+                                    ) {
+                                        PlaybackQualityLabel(
+                                            song = song,
+                                            isLoading = isLoading,
+                                            modifier = Modifier
+                                                .align(Alignment.Center)
+                                                .padding(horizontal = 8.dp),
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
