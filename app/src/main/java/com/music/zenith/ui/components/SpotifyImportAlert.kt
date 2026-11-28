@@ -86,6 +86,7 @@ fun SpotifyImportAlert(
     var status by remember { mutableStateOf<String?>(null) }
     var failed by remember { mutableStateOf(false) }
     var unmatched by remember { mutableStateOf<List<SpotifyImportTrack>?>(null) }
+    var partialCount by remember { mutableStateOf<Int?>(null) }
 
     fun start() {
         val id = SpotifyImporter.extractPlaylistId(link)
@@ -104,13 +105,19 @@ fun SpotifyImportAlert(
         status = context.getString(R.string.spotify_import_fetching)
         scope.launch {
             try {
-                val (name, tracks) = SpotifyImporter.fetchPlaylistTracks(id)
-                val (songs, missed) = SpotifyImporter.resolveToSongs(tracks, effectiveLanguage) { done, total ->
+                val fetched = SpotifyImporter.fetchPlaylistTracks(id)
+                val name = fetched.name
+                val (songs, missed) = SpotifyImporter.resolveToSongs(fetched.tracks, effectiveLanguage) { done, total ->
                     status = context.getString(R.string.spotify_import_matching, done, total)
                 }
                 if (songs.isEmpty()) error(context.getString(R.string.spotify_import_none))
                 onImported(name, privacy, songs)
-                if (missed.isEmpty()) onDismiss() else unmatched = missed
+                if (missed.isEmpty() && !fetched.incomplete) {
+                    onDismiss()
+                } else {
+                    partialCount = fetched.tracks.size.takeIf { fetched.incomplete }
+                    unmatched = missed
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -139,13 +146,17 @@ fun SpotifyImportAlert(
             val missed = unmatched
             if (missed != null) {
                 Text(
-                    text = stringResource(R.string.spotify_import_unmatched, missed.size),
+                    text = listOfNotNull(
+                        partialCount?.let { stringResource(R.string.spotify_import_partial, it) },
+                        missed.size.takeIf { it > 0 }
+                            ?.let { stringResource(R.string.spotify_import_unmatched, it) },
+                    ).joinToString("\n"),
                     modifier = Modifier.padding(top = 4.dp, bottom = 10.dp),
                     style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 17.sp),
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center,
                 )
-                Column(
+                if (missed.isNotEmpty()) Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(max = 200.dp)

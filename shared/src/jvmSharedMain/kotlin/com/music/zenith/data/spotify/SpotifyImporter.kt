@@ -28,6 +28,16 @@ data class SpotifyImportTrack(
     val artist: String,
 )
 
+/**
+ * A fetched playlist. [incomplete] is true when the tracks past the embed
+ * page's first 100 could not be loaded, so the list is only a prefix.
+ */
+data class SpotifyPlaylistFetch(
+    val name: String,
+    val tracks: List<SpotifyImportTrack>,
+    val incomplete: Boolean = false,
+)
+
 object SpotifyImporter {
 
     private const val USER_AGENT =
@@ -66,7 +76,7 @@ object SpotifyImporter {
     /**
      * Fetches public Spotify playlist details from Spotify's embed endpoint.
      */
-    suspend fun fetchPlaylistTracks(playlistId: String): Pair<String, List<SpotifyImportTrack>> =
+    suspend fun fetchPlaylistTracks(playlistId: String): SpotifyPlaylistFetch =
         withContext(Dispatchers.IO) {
             val url = "https://open.spotify.com/embed/playlist/$playlistId"
             val request = Request.Builder()
@@ -129,19 +139,45 @@ object SpotifyImporter {
             // The embed page stops at its first 100 tracks. The web player's
             // own query, with the anonymous token the embed hands out, pages
             // through the rest; if it refuses, the 100 already read stand.
+            var incomplete = false
             if (tracks.size >= EMBED_TRACK_LIMIT) {
                 val token = props?.get("state")?.jsonObject
                     ?.get("settings")?.jsonObject
                     ?.get("session")?.jsonObject
                     ?.get("accessToken")?.jsonPrimitive?.content
-                if (token != null) {
-                    runCatching { fetchRemainingTracks(playlistId, token, tracks.size) }
-                        .getOrNull()
-                        ?.let { tracks.addAll(it) }
+                val rest = token?.let {
+                    try {
+                        fetchRemainingTracks(playlistId, it, tracks.size)
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+                if (rest != null) {
+                    tracks.addAll(rest)
+                } else {
+                    // The anonymous query was refused. A signed-in Spotify
+                    // account pages the whole playlist through the library.
+                    val full = try {
+                        SpotifyLibrary.tracks(playlistId).map {
+                            SpotifyImportTrack(title = it.title.trim(), artist = it.artist.trim())
+                        }
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        null
+                    }
+                    if (full != null && full.size > tracks.size) {
+                        tracks.clear()
+                        tracks.addAll(full)
+                    } else {
+                        incomplete = true
+                    }
                 }
             }
 
-            Pair(playlistTitle, tracks)
+            SpotifyPlaylistFetch(playlistTitle, tracks, incomplete)
         }
 
     /**
@@ -199,9 +235,15 @@ object SpotifyImporter {
                 if (!response.isSuccessful) error("HTTP ${response.code}")
                 response.body?.string().orEmpty()
             }
-            val content = json.parseToJsonElement(body).jsonObject["data"]?.jsonObject
+            val root = json.parseToJsonElement(body).jsonObject
+            val content = root["data"]?.jsonObject
                 ?.get("playlistV2")?.jsonObject?.get("content")?.jsonObject
-                ?: break
+            if (content == null) {
+                // An error payload (stale persisted query, refused token) is a
+                // failure, not the end of the playlist.
+                if (root["errors"] != null || root["data"] == null) error("Spotify refused the request")
+                break
+            }
             val items = content["items"]?.jsonArray ?: break
             for (item in items) {
                 val data = item.jsonObject["itemV2"]?.jsonObject?.get("data")?.jsonObject ?: continue
