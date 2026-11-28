@@ -40,3 +40,6 @@ te_download">다운로드 삭제</string>
 <string name="song_cache_large_subtitle">다운로드한 오디오를 디스크에 최대 %1$s까지 보관해요. 여유 공간을 상당히 차지할 수 있어요.</string>
 <string name="replay_genres_enabled_subtitle">Last.fm에 아티스트의 장르를 요청해요. 아티스트 이름만 전송돼요.</string>
 <string name="swipe_plays_next">곡을 스와이프하면 다음에 재생</string>
+fades and drop chevron
+import androidx.compose.ui.unit.LayoutDirection
+private const val LYRIC_FADE_MAX_MS = 700f

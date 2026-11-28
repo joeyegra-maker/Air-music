@@ -118,6 +118,7 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalDensity
@@ -3336,6 +3337,73 @@ private const val LYRIC_FADE_FRACTION = 0.28f
 private const val LYRIC_FADE_MIN_MS = 160f
 private const val LYRIC_FADE_MAX_MS = 700f
 
+/** Share of a line's own time before the strip starts scrolling, and when it has finished. */
+private const val STRIP_SCROLL_START = 0.12f
+private const val STRIP_SCROLL_END = 0.82f
+
+/** How wide the soft edge is where an overflowing line meets the strip's sides. */
+private val STRIP_EDGE_FADE = 22.dp
+
+/** Eased 0..1 scroll for a line [progress] of the way through its own time. */
+private fun stripScrollAmount(progress: Float): Float {
+    val t = ((progress - STRIP_SCROLL_START) / (STRIP_SCROLL_END - STRIP_SCROLL_START)).coerceIn(0f, 1f)
+    return t * t * (3f - 2f * t)
+}
+
+private class LyricStripScroll {
+    var overflowPx: Float = 0f
+}
+
+/**
+ * Lets a line wider than the strip glide sideways in time with the vocal
+ * instead of being cut off. The line is measured at its full width, clipped to
+ * the strip, and moved by [progress] (0..1 through the line). The side it is
+ * leaving behind and the side still to come each fade softly, and a line that
+ * fits is left alone, with no scroll and no fade.
+ */
+@Composable
+private fun Modifier.lyricStripScroll(rtl: Boolean, progress: () -> Float): Modifier {
+    val scroll = remember { LyricStripScroll() }
+    return this
+        .clipToBounds()
+        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+        .drawWithContent {
+            drawContent()
+            val overflow = scroll.overflowPx
+            if (overflow <= 0f || size.width <= 0f) return@drawWithContent
+            val consumed = overflow * stripScrollAmount(progress())
+            val fadeWidth = minOf(STRIP_EDGE_FADE.toPx(), size.width / 3f)
+            val startFade = (consumed / fadeWidth).coerceIn(0f, 1f)
+            val endFade = ((overflow - consumed) / fadeWidth).coerceIn(0f, 1f)
+            val leftFade = if (rtl) endFade else startFade
+            val rightFade = if (rtl) startFade else endFade
+            val edge = fadeWidth / size.width
+            drawRect(
+                brush = Brush.horizontalGradient(
+                    0f to Color.White.copy(alpha = 1f - leftFade),
+                    edge to Color.White,
+                    (1f - edge) to Color.White,
+                    1f to Color.White.copy(alpha = 1f - rightFade),
+                ),
+                blendMode = BlendMode.DstIn,
+            )
+        }
+        .layout { measurable, constraints ->
+            val placeable = measurable.measure(
+                constraints.copy(minWidth = 0, maxWidth = Constraints.Infinity),
+            )
+            val width = placeable.width.coerceAtMost(constraints.maxWidth)
+            scroll.overflowPx = (placeable.width - width).coerceAtLeast(0).toFloat()
+            layout(width, placeable.height) {
+                val overflow = scroll.overflowPx
+                placeable.placeWithLayer(0, 0) {
+                    val consumed = overflow * stripScrollAmount(progress())
+                    translationX = if (rtl) -(overflow - consumed) else -consumed
+                }
+            }
+        }
+}
+
 /**
  * The single lyric line above the scrubber.
  *
@@ -3386,13 +3454,6 @@ private fun CurrentLyricLine(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f, fill = false),
-            )
-            Spacer(Modifier.width(6.dp))
-            Icon(
-                imageVector = ZenithIcons.ChevronRight,
-                contentDescription = null,
-                tint = Color.White.copy(alpha = 0.5f),
-                modifier = Modifier.size(14.dp),
             )
         }
         return
@@ -3495,6 +3556,17 @@ private fun CurrentLyricLine(
                 val remaining = (end - clock.longValue).toFloat()
                 alpha = 0.78f * (remaining / fade).coerceIn(0f, 1f)
             }
+            val scrolling = fading.lyricStripScroll(rtl = stripRtl) {
+                val start = lines.getOrNull(itemIndex)?.timeMs ?: 0L
+                val end = lines.getOrNull(itemIndex + 1)?.timeMs
+                    ?: durationMs.takeIf { it > start }
+                    ?: (start + 4_000L)
+                if (itemInstrumental || end <= start) {
+                    0f
+                } else {
+                    ((clock.longValue - start).toFloat() / (end - start)).coerceIn(0f, 1f)
+                }
+            }
             if (swept != null) {
                 SweptLyricLine(
                     line = swept,
@@ -3504,11 +3576,11 @@ private fun CurrentLyricLine(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     rise = false,
-                    modifier = fading,
+                    modifier = scrolling,
                 )
             } else {
                 Text(
-                    modifier = fading,
+                    modifier = scrolling,
                     text = lineText,
                     style = voiceStyle(
                         stripStyle.copy(
@@ -3522,27 +3594,6 @@ private fun CurrentLyricLine(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-        }
-
-        if (!stripRtl) {
-            Spacer(Modifier.width(6.dp))
-            // Disclosure hint: this strip opens the full lyrics screen.
-            Icon(
-                imageVector = ZenithIcons.ChevronRight,
-                contentDescription = null,
-                tint = Color.White.copy(alpha = 0.5f),
-                modifier = Modifier.size(14.dp),
-            )
-        } else {
-            Spacer(Modifier.width(6.dp))
-            Icon(
-                imageVector = ZenithIcons.ChevronRight,
-                contentDescription = null,
-                tint = Color.White.copy(alpha = 0.5f),
-                modifier = Modifier
-                    .size(14.dp)
-                    .graphicsLayer { scaleX = -1f },
-            )
         }
     }
 }
