@@ -1562,6 +1562,14 @@ class CrossfadeController(
         if (out === into) return false
         val nextIndex = if (targetIndex != C.INDEX_UNSET) targetIndex else out.nextMediaItemIndex
         if (nextIndex == C.INDEX_UNSET) return false
+        // A song whose standby already proved unplayable (and could not be
+        // swapped to YouTube) is not armed again: the blend would only wait
+        // out the timeout and cancel, over and over.
+        if (nextIndex in 0 until out.mediaItemCount &&
+            out.getMediaItemAt(nextIndex).mediaId in unplayableStandby
+        ) {
+            return false
+        }
         // Not into a music video that is still waiting for its audio version:
         // the conversion only ever touches the session player's queue, so the
         // standby would keep the raw video row and blend in the wrong
@@ -1777,6 +1785,7 @@ class CrossfadeController(
     private fun driveArming() {
         val standbyPlayer = incoming
         if (standbyPlayer != null && reopenStandbyAsManifest(standbyPlayer)) return
+        if (standbyPlayer != null && fallbackStandbyToYouTube(standbyPlayer)) return
         if (manualFade) return driveManualArming()
         val out = outgoing ?: return bail()
         val into = incoming ?: return bail()
@@ -1830,6 +1839,75 @@ class CrossfadeController(
         val atFadePoint = fadeEndMs <= 0L || fadeEndMs - out.currentPosition <= fadeMs
         if (!atFadePoint) return
         if (ready) startFade()
+    }
+
+    private var standbyFallingBack: String? = null
+    private var standbyFallbackDone: String? = null
+    private val unplayableStandby = mutableSetOf<String>()
+
+    /**
+     * Standby gagal memutar sumber yang lebih tinggi (addon/lossless/upgrade):
+     * ganti ke versi YouTube-nya seperti fallback player utama, supaya mix
+     * tidak menunggu timeout lalu batal berulang. Analisis lagu memang dibuat
+     * dari byte YouTube, jadi mix tetap bisa jalan.
+     *
+     * Kalau fallback tidak mungkin atau sudah pernah dicoba, mix dibatalkan
+     * langsung dan lagu itu tidak di-arm ulang.
+     *
+     * @return true selama fallback berjalan atau mix sudah dibatalkan.
+     */
+    private fun fallbackStandbyToYouTube(into: ExoPlayer): Boolean {
+        val item = into.currentMediaItem ?: return false
+        val mediaId = item.mediaId
+        if (standbyFallingBack == mediaId) return true
+        val error = into.playerError ?: return false
+        val uri = item.localConfiguration?.uri
+        val fallback = if (standbyFallbackDone == mediaId || uri == null || uri.authority == "source") {
+            null
+        } else {
+            val videoId = uri.getQueryParameter("v")
+            val substituted = videoId?.let(StreamChoice::isSubstitute) == true
+            if (PlaybackFallback.isAlternative(uri.toString(), substituted)) {
+                item.toYouTubeFallbackMediaItem()
+            } else {
+                null
+            }
+        }
+        if (fallback == null || uri == null) {
+            TrackLog.w(TAG, "mix: next track $mediaId is unplayable on standby (${error.errorCodeName}); no blend", about = mediaId)
+            if (standbyFallbackDone == mediaId || error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED) {
+                unplayableStandby += mediaId
+            }
+            bail()
+            return true
+        }
+
+        QualityUpgrade.forget(mediaId)
+        QualityUpgrade.refuseUpgrades(mediaId)
+        uri.getQueryParameter("v")?.let {
+            StreamChoice.refuseSubstitutes(it)
+            StreamChoice.forget(it)
+        }
+        TrackLog.w(TAG, "mix: next track $mediaId failed on a higher-quality source; falling back to YouTube audio", about = mediaId)
+        standbyFallingBack = mediaId
+        scope.launch {
+            try {
+                withContext(Dispatchers.IO) { AudioCache.discard(uri) }
+                withContext(Dispatchers.Main) {
+                    if (phase != Phase.ARMING || incoming !== into) return@withContext
+                    if (into.currentMediaItem?.mediaId != mediaId) return@withContext
+                    val index = into.currentMediaItemIndex
+                    into.replaceMediaItem(index, fallback)
+                    into.seekTo(index, incomingCueTimeMs)
+                    into.prepare()
+                    standbyFallbackDone = mediaId
+                    armDeadline = SystemClock.elapsedRealtime() + ARM_TIMEOUT_MS
+                }
+            } finally {
+                standbyFallingBack = null
+            }
+        }
+        return true
     }
 
     private var manifestReopening: String? = null
