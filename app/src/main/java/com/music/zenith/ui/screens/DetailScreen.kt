@@ -18,8 +18,10 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import com.music.zenith.ui.components.GLASS_JELLY_PRESS_WIDE
+import com.music.zenith.ui.components.PageChromeTint
 import com.music.zenith.ui.components.glassJelly
 import com.music.zenith.ui.components.liquidGlassRim
 import com.music.zenith.ui.components.continuous
@@ -74,6 +76,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -108,10 +111,16 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -168,6 +177,9 @@ import org.jetbrains.compose.resources.painterResource
 import com.music.zenith.data.canvas.AppleArtistArtRepository
 import com.music.zenith.data.canvas.releaseDateText
 import com.music.zenith.data.canvas.appleCatalogue
+import com.music.zenith.data.canvas.AlbumLogo
+import com.music.zenith.data.canvas.AlbumLogoPaperTransformation
+import com.music.zenith.data.canvas.AlbumLogoRepository
 import com.music.zenith.data.canvas.ArtistSignature
 import com.music.zenith.data.canvas.ArtistSignatureRepository
 import com.music.zenith.data.canvas.SignatureInkTransformation
@@ -205,6 +217,7 @@ import com.music.zenith.ui.components.libraryGrid
 import com.music.zenith.ui.components.lightweightLiquidGlass
 import com.music.zenith.ui.components.thumbnailBorder
 import com.music.zenith.ui.components.detailSkeleton
+import com.music.zenith.ui.components.isLosslessQuality
 import com.music.zenith.ui.components.topBarContentPadding
 import com.music.zenith.ui.components.trackColumnWidth
 import com.music.zenith.ui.haptics.Haptic
@@ -311,6 +324,10 @@ private const val LOGO_RETRY_DELAY_MS = 800L
 
 /** Vector signatures decode at this width so small files stay crisp laid out large. */
 private const val SVG_DECODE_WIDTH = 1600
+
+/** An album title logo's widest share of the page, and its tallest height in dp. */
+private const val ALBUM_LOGO_WIDTH = 0.7f
+private const val ALBUM_LOGO_MAX_HEIGHT_DP = 96
 
 private val CREDIT_SEPARATOR = Regex(""",\s|\s&\s|\s(?:x|and|feat\.?|ft\.?|with)\s""", RegexOption.IGNORE_CASE)
 
@@ -427,6 +444,10 @@ fun DetailScreen(
         if (page.type == BrowseType.ALBUM) rawSongs.popularTrackIds() else emptySet()
     }
     val isArtist = page.type == BrowseType.ARTIST
+    // Hero full-bleed menjulur ke bawah teks, jadi cover terbang menutupi teks
+    // di sana. Teks di halaman seperti ini menunggu cover mendarat.
+    val textAfterFlight = page.isAlbumHero() || page.isMixHero() || page.isLikedMusic() ||
+        page.covers.isNotEmpty() || page.isFolderCover()
     // Whether the top release card's album is already saved isn't on the shelf
     // item; it is read off the album once, as soon as the card is known.
     val topReleaseId = if (isArtist) page.sections.topRelease()?.browseId else null
@@ -449,7 +470,16 @@ fun DetailScreen(
     val signatureEnabled by AppSettings.signatureApiEnabled.collectAsStateWithLifecycle()
     val signatureBaseUrl by AppSettings.signatureApiUrl.collectAsStateWithLifecycle()
     val signatureUpdates by ArtistSignatureRepository.updates.collectAsStateWithLifecycle()
-    var signature by remember(page.browseId) { mutableStateOf<ArtistSignature?>(null) }
+    // Diisi dari cache sejak frame pertama, supaya kembali ke halaman ini tidak
+    // sempat menampilkan nama polos sebelum signature muncul lagi.
+    var signature by remember(page.browseId) {
+        mutableStateOf(
+            ArtistSignatureRepository.cached(
+                page.title,
+                ArtistSignatureRepository.effectiveBaseUrl(signatureEnabled, signatureBaseUrl),
+            ).takeIf { isArtist },
+        )
+    }
     // Opened from a track, the title is the whole credit ("A, B & C") until the
     // page loads and swaps in the one artist's name. Searching a credit finds
     // nobody, so a title that reads as several artists waits for that swap; any
@@ -475,14 +505,29 @@ fun DetailScreen(
             if (signature != null) return@LaunchedEffect
         }
     }
+    // Liked Music: warna halaman diambil dari tint cover hero (cache yang sama dengan
+    // LikedFluidBackground), bukan dari thumbnail halaman yang baru ada setelah daftar
+    // lagu datang. Jadi halaman tidak mulai hitam lalu loncat ke warna lain.
+    val isLikedPage = page.isLikedMusic()
+    val likedCovers = if (isLikedPage) rememberLikedCovers(page.browseId, songs) else emptyList()
+    val likedTint = if (isLikedPage) rememberMostPlayedTint(likedCovers, LIKED_COLORS) else null
     val palette = rememberArtworkPalette(
         // Folder perangkat (Local, Downloads, Cached) tidak punya sampul sendiri:
         // warnanya diambil dari cover lagu pertama, sama dengan hero, supaya
         // halamannya menyatu seperti halaman artis.
-        imageUrl = appleArt?.heroUrl ?: page.thumbnailUrl
-            ?: if (page.isFolderCover()) songs.firstOrNull { it.thumbnailUrl != null }?.thumbnailUrl else null,
-        keyColors = appleArt?.keyColors() ?: page.mix?.let { mixKeyColors(it) },
+        imageUrl = if (isLikedPage) {
+            null
+        } else {
+            appleArt?.heroUrl ?: page.thumbnailUrl
+                ?: if (page.isFolderCover()) songs.firstOrNull { it.thumbnailUrl != null }?.thumbnailUrl else null
+        },
+        keyColors = appleArt?.keyColors() ?: page.mix?.let { mixKeyColors(it) }
+            ?: likedTint?.let { com.music.zenith.ui.theme.ArtworkKeyColors(background = it[1], accent = it[2]) },
     )
+    // Fade atas/bawah di level app memakai warna yang sama dengan halaman ini.
+    if (isLikedPage) {
+        SideEffect { PageChromeTint.set(page.browseId, palette.background) }
+    }
 
     // Narrowing the running order in place — the release equivalent of the
     // filter box on the Local Music tab, and the one thing a long track list
@@ -570,6 +615,33 @@ fun DetailScreen(
             albumInfo = AppleAlbumInfoRepository.infoFor(
                 page.browseId, page.title, credit, songs.size,
             ) ?: albumInfo
+        }
+    }
+    // Logo judul album dari API yang sama dengan signature artis. Menggantikan
+    // teks judul di header album bila ada; teks tetap jadi cadangan.
+    val albumLogoBase = ArtistSignatureRepository.effectiveBaseUrl(signatureEnabled, signatureBaseUrl)
+    val isCatalogAlbumPage = page.type == BrowseType.ALBUM && folder == null &&
+        !page.browseId.startsWith("local:")
+    var albumLogo by remember(page.browseId) {
+        mutableStateOf(
+            if (isCatalogAlbumPage) AlbumLogoRepository.cached(page.title, credit, albumLogoBase) else null,
+        )
+    }
+    LaunchedEffect(page.browseId, page.title, credit, songsLoading, albumLogoBase) {
+        if (!isCatalogAlbumPage || songsLoading || credit.isBlank()) return@LaunchedEffect
+        if (albumLogoBase == null) {
+            albumLogo = null
+            return@LaunchedEffect
+        }
+        val backoff = listOf(0L, 5_000L, 15_000L, 30_000L)
+        for (wait in backoff) {
+            if (wait > 0) delay(wait)
+            albumLogo = AlbumLogoRepository.cached(page.title, credit, albumLogoBase)
+                ?: AlbumLogoRepository.logoFor(page.title, credit, albumLogoBase)
+                ?: albumLogo
+            if (albumLogo != null || AlbumLogoRepository.settled(page.title, credit, albumLogoBase)) {
+                return@LaunchedEffect
+            }
         }
     }
 
@@ -681,6 +753,7 @@ fun DetailScreen(
                         pull = { (listOverscroll as? PullDownOverscrollEffect)?.pullDownPx ?: 0f },
                         albumGenre = albumInfo?.genre,
                         albumQuality = albumInfo?.audioQualityLabel(),
+                        albumLogo = albumLogo,
                         canvas = canvas,
                         songs = songs,
                         onPlay = { onPlay(songs) },
@@ -762,7 +835,17 @@ fun DetailScreen(
                 if (!showAbout) return
                 item(key = "about") {
                     // Clear of the last shelf above it.
-                    Box(Modifier.padding(top = if (isArtist) 28.dp else 0.dp)) {
+                    Box(
+                        Modifier
+                            .padding(top = if (isArtist) 28.dp else 0.dp)
+                            .then(
+                                if (isArtist) {
+                                    Modifier
+                                } else {
+                                    Modifier.flightReveal(320, afterFlight = textAfterFlight)
+                                },
+                            ),
+                    ) {
                     AboutSection(
                         title = stringResource(
                             if (isArtist) R.string.about_artist else R.string.about_album,
@@ -875,7 +958,12 @@ fun DetailScreen(
                     ) { position, entry ->
                         // The first rows arrive one after another; later ones, composed
                         // while scrolling, are already visible and draw as they are.
-                        Column(Modifier.enterReveal(340 + position.coerceAtMost(8) * 30)) {
+                        Column(
+                            Modifier.flightReveal(
+                                delayMs = 340 + position.coerceAtMost(8) * 30,
+                                afterFlight = textAfterFlight,
+                            ),
+                        ) {
                         val song = entry.value
                         val isCurrent = isCurrentRow(song)
                         SongRow(
@@ -894,6 +982,7 @@ fun DetailScreen(
                             // what the filter — or a sort — left standing.
                             trackNumber = originalTrackNumbers[song.videoId].takeIf { numbered },
                             popular = numbered && song.videoId in popularIds,
+                            popularTint = albumLogo?.takeIf { isCatalogAlbumPage }?.let { LogoColors[it.imageUrl] },
                             subtitleColor = palette.onBackgroundVariant,
                             // Apple Music: no artist line when it is the album's own
                             // artist, and no per-row duration on an album.
@@ -904,6 +993,11 @@ fun DetailScreen(
                             isPlaying = isCurrent && isPlaying,
                             activeTint = palette.accent,
                             searchPlayingStyle = true,
+                            swipeTint = if (isArtist) {
+                                appleArt?.keyColor?.let { Color(it) }
+                            } else {
+                                albumLogo?.takeIf { isCatalogAlbumPage }?.let { LogoColors[it.imageUrl] }
+                            },
                         )
                         if (position < matches.lastIndex) {
                             HorizontalDivider(
@@ -924,13 +1018,21 @@ fun DetailScreen(
                 val albumSongs = (page.songs as? UiState.Success)?.data.orEmpty()
                 if (albumSongs.isNotEmpty()) {
                     item(key = "album-info") {
-                        AlbumInfoFooter(
-                            releaseDate = albumInfo?.releaseDateText(),
-                            year = RELEASE_YEAR.find(page.subtitle)?.value,
-                            copyright = albumInfo?.copyright,
-                            songs = albumSongs,
-                            palette = palette,
-                        )
+                        // Menyusul baris lagu terakhir, tidak mendahuluinya.
+                        Box(
+                            Modifier.flightReveal(
+                                delayMs = 370 + matches.size.coerceAtMost(8) * 30,
+                                afterFlight = textAfterFlight,
+                            ),
+                        ) {
+                            AlbumInfoFooter(
+                                releaseDate = albumInfo?.releaseDateText(),
+                                year = RELEASE_YEAR.find(page.subtitle)?.value,
+                                copyright = albumInfo?.copyright,
+                                songs = albumSongs,
+                                palette = palette,
+                            )
+                        }
                     }
                 }
             }
@@ -1056,6 +1158,8 @@ private fun ReleaseHeader(
     albumGenre: String? = null,
     /** "Hi-Res Lossless" / "Lossless" dari katalog Apple, setelah tahun di baris info. */
     albumQuality: String? = null,
+    /** Logo judul album dari API signature; menggantikan teks judul bila ada. */
+    albumLogo: AlbumLogo? = null,
     /** How far the list is pulled past its top right now, in px; the hero zooms by it. */
     pull: () -> Float = { 0f },
 ) {
@@ -1064,7 +1168,19 @@ private fun ReleaseHeader(
     val isCatalogAlbum = page.type == BrowseType.ALBUM && !page.browseId.startsWith("local:")
     // Kualitas dipisah dari teks meta supaya bisa diberi icon sendiri.
     val albumQualityShown = albumQuality.takeIf { isCatalogAlbum }
-    val meta = if (isCatalogAlbum) page.albumMeta(albumGenre) else listMeta
+    // Folder perangkat (Downloads, Cache, Lokal): jumlah lagu Lossless / Hi-Res
+    // ikut di baris meta, seperti baris kualitas di header album.
+    val losslessCount = remember(songs, page.browseId) {
+        if (page.browseId.startsWith("local:") || page.browseId == CACHE_FOLDER_BROWSE_ID) {
+            songs.count { it.isLosslessQuality() }
+        } else {
+            0
+        }
+    }
+    val meta = listOf(
+        if (isCatalogAlbum) page.albumMeta(albumGenre) else listMeta,
+        if (losslessCount > 0) "$losslessCount Lossless" else "",
+    ).filter { it.isNotBlank() }.joinToString(" · ")
     // Liked Music dan Most Played tidak memakai sleeve berbingkai: seninya full-bleed.
     val albumHero = page.isAlbumHero()
     val mixHero = page.isMixHero()
@@ -1228,15 +1344,46 @@ private fun ReleaseHeader(
         }
 
         Spacer(Modifier.height(20.dp))
-        Text(
-            text = page.title,
-            style = MaterialTheme.typography.headlineMedium,
-            color = palette.onBackground,
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.flightReveal(150, afterFlight = page.covers.isNotEmpty()).padding(horizontal = HEADER_GUTTER),
+        var logoShown by remember(albumLogo?.imageUrl) { mutableStateOf(false) }
+        var logoFailed by remember(albumLogo?.imageUrl) { mutableStateOf(false) }
+        val titleLogo = albumLogo.takeIf { isCatalogAlbum && !logoFailed }
+        var logoColor by remember(albumLogo?.imageUrl) {
+            mutableStateOf(albumLogo?.imageUrl?.let { LogoColors[it] })
+        }
+        // White until the logo's colour is read, and wherever there is no logo.
+        val playColor by animateColorAsState(
+            targetValue = logoColor?.takeIf { titleLogo != null } ?: Color.White,
+            animationSpec = tween(260),
+            label = "albumPlayColor",
         )
+        // Ikon tombol samping mengikuti warna logo; null berarti warna bawaan.
+        val sideTint = playColor.takeIf { logoColor != null && titleLogo != null }
+        Box(contentAlignment = Alignment.Center) {
+            if (titleLogo != null) {
+                AlbumTitleLogo(
+                    logo = titleLogo,
+                    title = page.title,
+                    tint = palette.onBackground,
+                    onShown = { logoShown = true },
+                    onFailed = { logoFailed = true },
+                    onColor = { logoColor = it },
+                    modifier = Modifier
+                        .flightReveal(150, afterFlight = fullBleed)
+                        .padding(horizontal = HEADER_GUTTER),
+                )
+            }
+            if (titleLogo == null || !logoShown) {
+                Text(
+                    text = page.title,
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = palette.onBackground,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.flightReveal(150, afterFlight = fullBleed).padding(horizontal = HEADER_GUTTER),
+                )
+            }
+        }
         if (credit.isNotBlank()) {
             Spacer(Modifier.height(2.dp))
             Text(
@@ -1250,7 +1397,8 @@ private fun ReleaseHeader(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
-                    .flightReveal(200, afterFlight = page.covers.isNotEmpty())
+                    .flightReveal(200, afterFlight = fullBleed)
+                    .lateReveal(40)
                     .padding(horizontal = HEADER_GUTTER)
                     .let { m ->
                         val id = artist?.artistId
@@ -1266,7 +1414,7 @@ private fun ReleaseHeader(
         if (meta.isNotBlank() || albumQualityShown != null) {
             Spacer(Modifier.height(4.dp))
             Row(
-                modifier = Modifier.flightReveal(240, afterFlight = page.covers.isNotEmpty()).padding(horizontal = HEADER_GUTTER),
+                modifier = Modifier.flightReveal(240, afterFlight = fullBleed).lateReveal(80).padding(horizontal = HEADER_GUTTER),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -1311,7 +1459,8 @@ private fun ReleaseHeader(
             Spacer(Modifier.height(18.dp))
             Row(
                 modifier = Modifier
-                    .flightReveal(290, afterFlight = page.covers.isNotEmpty())
+                    .flightReveal(290, afterFlight = fullBleed)
+                    .lateReveal(130)
                     .widthIn(max = RELEASE_ACTIONS_MAX_WIDTH)
                     .fillMaxWidth()
                     .padding(horizontal = HEADER_GUTTER),
@@ -1326,12 +1475,14 @@ private fun ReleaseHeader(
                             onClick = onShuffle,
                             haptic = Haptic.Resume,
                             size = RELEASE_SIDE_BUTTON,
+                            tint = sideTint,
                         )
                         ActionPill(
                             icon = ZenithIcons.Play,
                             label = stringResource(R.string.play),
                             onClick = onPlay,
                             filled = true,
+                            fillColor = playColor,
                             size = RELEASE_SIDE_BUTTON,
                             modifier = Modifier.weight(1f),
                         )
@@ -1339,6 +1490,7 @@ private fun ReleaseHeader(
                             icon = ZenithIcons.Plus,
                             contentDescription = stringResource(R.string.playlist_add_songs),
                             onClick = onAddSongs,
+                            tint = sideTint,
                             size = RELEASE_SIDE_BUTTON,
                         )
                         return@Row
@@ -1352,6 +1504,7 @@ private fun ReleaseHeader(
                         label = stringResource(R.string.play),
                         onClick = onPlay,
                         filled = true,
+                        fillColor = playColor,
                         size = RELEASE_SIDE_BUTTON,
                         modifier = Modifier.weight(1f),
                     )
@@ -1381,12 +1534,14 @@ private fun ReleaseHeader(
                     onClick = onShuffle,
                     haptic = Haptic.Resume,
                     size = RELEASE_SIDE_BUTTON,
+                    tint = sideTint,
                 )
                 ActionPill(
                     icon = ZenithIcons.Play,
                     label = stringResource(R.string.play),
                     onClick = onPlay,
                     filled = true,
+                    fillColor = playColor,
                     size = RELEASE_SIDE_BUTTON,
                     modifier = Modifier.weight(1f),
                 )
@@ -1403,6 +1558,7 @@ private fun ReleaseHeader(
                         onClick = { onToggleLibrary?.invoke() },
                         haptic = if (library.saved) Haptic.ToggleOff else Haptic.ToggleOn,
                         size = RELEASE_SIDE_BUTTON,
+                        tint = sideTint,
                     )
                 }
             }
@@ -1412,7 +1568,11 @@ private fun ReleaseHeader(
         // masih kosong, dan baris Shuffle/Play belum ada, tapi tombol ini harus.
         // Dengan lagu, tombol ini sudah ada di baris aksi (addSongsInRow); pil lebar
         // hanya untuk playlist kosong atau saat baris itu sudah dipakai tombol lain.
-        if (onAddSongs != null && !(addSongsInRow && songs.isNotEmpty())) {
+        // Hanya setelah daftar lagu selesai dimuat: selama Loading, songs masih
+        // kosong dan pil ini sempat muncul lalu hilang saat lagu datang.
+        if (onAddSongs != null && page.songs is UiState.Success &&
+            !(addSongsInRow && songs.isNotEmpty())
+        ) {
             Spacer(Modifier.height(if (songs.isEmpty()) 18.dp else 10.dp))
             ActionPill(
                 icon = ZenithIcons.Plus,
@@ -1421,7 +1581,7 @@ private fun ReleaseHeader(
                 filled = songs.isEmpty(),
                 size = RELEASE_SIDE_BUTTON,
                 modifier = Modifier
-                    .flightReveal(290, afterFlight = page.covers.isNotEmpty())
+                    .flightReveal(290, afterFlight = fullBleed)
                     .widthIn(max = RELEASE_ACTIONS_MAX_WIDTH)
                     .fillMaxWidth()
                     .padding(horizontal = HEADER_GUTTER),
@@ -1530,10 +1690,45 @@ private fun DetailSearchField(
     }
 }
 
+/**
+ * Orders [Song]s by a text field with the locale's own collation, so accented
+ * and non-Latin names land where a reader expects. A blank value sorts after
+ * every named one: a playlist full of tracks with no album must not open with them.
+ */
+private fun textOrder(key: (Song) -> String?): Comparator<Song> {
+    val collator = java.text.Collator.getInstance().apply { strength = java.text.Collator.SECONDARY }
+    return Comparator { a, b ->
+        val x = key(a)?.trim().orEmpty()
+        val y = key(b)?.trim().orEmpty()
+        when {
+            x.isEmpty() && y.isEmpty() -> 0
+            x.isEmpty() -> 1
+            y.isEmpty() -> -1
+            else -> collator.compare(x, y)
+        }
+    }
+}
+
+/** Sorts by [keys] in turn; what they leave tied keeps its place in the running order. */
+private fun List<Song>.sortedByKeys(vararg keys: (Song) -> String?): List<Song> {
+    val orders = keys.map { textOrder(it) }
+    return withIndex()
+        .sortedWith(
+            Comparator { a, b ->
+                orders.firstNotNullOfOrNull { order ->
+                    order.compare(a.value, b.value).takeIf { it != 0 }
+                } ?: a.index.compareTo(b.index)
+            },
+        )
+        .map { it.value }
+}
+
 internal fun List<Song>.sortedForDetail(sort: SongSort): List<Song> = when (sort) {
     SongSort.DEFAULT -> this
     SongSort.TITLE_ASC -> sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.title })
     SongSort.TITLE_DESC -> sortedWith(compareByDescending(String.CASE_INSENSITIVE_ORDER) { it.title })
+    SongSort.ARTIST_ASC -> sortedByKeys({ it.artist }, { it.albumName })
+    SongSort.ALBUM_ASC -> sortedByKeys({ it.albumName })
     // A catalogue row carries no added date, so its place in the running
     // order stands in for one: a playlist is appended to as songs are added,
     // and reversed that puts the most recent addition on top. Rows that do
@@ -1601,7 +1796,8 @@ private fun ArtistHeader(
         // Whether the logo has actually been drawn. Until it has — a first fetch
         // of an Apple logo is a few hundred KB the CDN may still be resizing — the
         // name stands in for it, so the header is never left with nothing in it.
-        var logoShown by remember(imageUrl) { mutableStateOf(false) }
+        // Saveable: saat kembali dari album, "Signed by" langsung ada di tempatnya.
+        var logoShown by rememberSaveable(imageUrl) { mutableStateOf(false) }
         if (imageUrl != null) {
             val context = LocalPlatformContext.current
             var attempt by remember(imageUrl) { mutableIntStateOf(0) }
@@ -1705,6 +1901,120 @@ private fun ArtistHeader(
     }
 }
 
+/** Title logo colours already read, so a revisited album starts tinted. */
+private val LogoColors = androidx.compose.runtime.mutableStateMapOf<String, Color>()
+
+/**
+ * The dominant ink of a logo, favouring saturated colours over its white or
+ * black trim. Null when that ink is too dark to fill a button on a dark page.
+ */
+private fun logoColorOf(bitmap: androidx.compose.ui.graphics.ImageBitmap): Color? {
+    val pixels = bitmap.toPixelMap()
+    val step = (maxOf(pixels.width, pixels.height) / 160).coerceAtLeast(1)
+    val buckets = HashMap<Int, MutableList<Color>>()
+    for (y in 0 until pixels.height step step) {
+        for (x in 0 until pixels.width step step) {
+            val color = pixels[x, y]
+            if (color.alpha < 0.9f) continue
+            val key = ((color.red * 15).toInt() shl 8) or
+                ((color.green * 15).toInt() shl 4) or
+                (color.blue * 15).toInt()
+            buckets.getOrPut(key) { mutableListOf() }.add(color)
+        }
+    }
+    val best = buckets.values.maxByOrNull { colors ->
+        val first = colors.first()
+        val chroma = maxOf(first.red, first.green, first.blue) -
+            minOf(first.red, first.green, first.blue)
+        colors.size * (0.25f + chroma)
+    } ?: return null
+    val ink = Color(
+        red = best.map { it.red }.average().toFloat(),
+        green = best.map { it.green }.average().toFloat(),
+        blue = best.map { it.blue }.average().toFloat(),
+    )
+    return ink.takeIf { it.luminance() >= 0.08f }
+}
+
+/**
+ * An album's title logo in place of its name. Vectors are tinted with the
+ * page's text colour (dark ink would vanish on a dark page); rasters keep
+ * their own pixels. Two retries on a dropped fetch, then [onFailed] so the
+ * caller puts the name back.
+ */
+@Composable
+private fun AlbumTitleLogo(
+    logo: AlbumLogo,
+    title: String,
+    tint: Color,
+    onShown: () -> Unit,
+    onFailed: () -> Unit,
+    modifier: Modifier = Modifier,
+    /** The logo's own colour, once read; never called for a tinted vector. */
+    onColor: (Color?) -> Unit = {},
+) {
+    val context = LocalPlatformContext.current
+    var shownImage by remember(logo.imageUrl) { mutableStateOf<coil3.Image?>(null) }
+    var attempt by remember(logo.imageUrl) { mutableIntStateOf(0) }
+    var failed by remember(logo.imageUrl) { mutableStateOf(false) }
+    val isSvg = logo.format == "svg"
+    val aspect = logo.aspect.coerceIn(0.4f, 6f)
+    val request = remember(logo.imageUrl, attempt) {
+        ImageRequest.Builder(context).data(logo.imageUrl).apply {
+            if (isSvg) {
+                size(SVG_DECODE_WIDTH, (SVG_DECODE_WIDTH / aspect).roundToInt())
+            } else {
+                size(coil3.size.Size.ORIGINAL)
+                transformations(AlbumLogoPaperTransformation)
+                forPixelAccess()
+            }
+        }.build()
+    }
+    LaunchedEffect(failed) {
+        if (!failed) return@LaunchedEffect
+        if (attempt < LOGO_RETRIES) {
+            delay(LOGO_RETRY_DELAY_MS)
+            failed = false
+            attempt++
+        } else {
+            onFailed()
+        }
+    }
+    LaunchedEffect(shownImage) {
+        val image = shownImage ?: return@LaunchedEffect
+        // A vector is drawn in the page's text colour, so it has none of its own.
+        if (isSvg) return@LaunchedEffect
+        val color = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            logoColorOf(image.toImageBitmap())
+        }
+        if (color != null) LogoColors[logo.imageUrl] = color
+        onColor(color)
+    }
+    AsyncImage(
+        model = request,
+        contentDescription = title,
+        contentScale = ContentScale.Fit,
+        colorFilter = if (isSvg) ColorFilter.tint(tint) else null,
+        onState = { state ->
+            when (state) {
+                is AsyncImagePainter.State.Success -> {
+                    shownImage = state.result.image
+                    onShown()
+                }
+                is AsyncImagePainter.State.Error -> failed = true
+                else -> Unit
+            }
+        },
+        modifier = modifier.layout { measurable, constraints ->
+            val widest = constraints.maxWidth * ALBUM_LOGO_WIDTH
+            val height = minOf(widest / aspect, ALBUM_LOGO_MAX_HEIGHT_DP.dp.toPx()).roundToInt()
+            val width = (height * aspect).roundToInt()
+            val placeable = measurable.measure(Constraints.fixed(width, height))
+            layout(width, height) { placeable.place(0, 0) }
+        },
+    )
+}
+
 /**
  * Everything on an artist page that is colour rather than words: the photo,
  * with its foot dissolved into the solid [ArtworkPalette.wash] the page is
@@ -1765,7 +2075,18 @@ private fun PageBackground(
                 .zoomBackgroundOnPull(pull)
                 .offset { IntOffset(0, listState.headerTop(artHeight.toPx()).roundToInt()) }
                 // After the offset, so the flight lands on where the photo really is.
-                .coverFlightTarget(page.browseId, 0.dp, palette.wash),
+                .coverFlightTarget(page.browseId, 0.dp, palette.wash)
+                // Tepi foto di posisi piksel pecahan menyisakan satu baris setengah
+                // transparan. Strip warna halaman menutup jahitannya.
+                .drawWithContent {
+                    drawContent()
+                    val seam = 2.dp.toPx()
+                    drawRect(
+                        color = palette.wash,
+                        topLeft = Offset(0f, size.height - seam),
+                        size = androidx.compose.ui.geometry.Size(size.width, seam * 2f),
+                    )
+                },
         ) {
             SwapArt(
                 url = art,
@@ -1942,6 +2263,7 @@ private fun ActionRow(
             onClick = onShuffle,
             haptic = Haptic.Resume,
             size = ARTIST_SIDE_BUTTON,
+            tint = playColor,
         )
 
         PlayCircle(
@@ -1961,6 +2283,7 @@ private fun ActionRow(
                 haptic = if (subscription.subscribed) Haptic.ToggleOff else Haptic.ToggleOn,
                 size = ARTIST_SIDE_BUTTON,
                 iconScale = 0.56f,
+                tint = playColor,
             )
         } else {
             CircleIconButton(
@@ -1970,6 +2293,7 @@ private fun ActionRow(
                 size = ARTIST_SIDE_BUTTON,
                 enabled = false,
                 iconScale = 0.56f,
+                tint = playColor,
             )
         }
     }
@@ -1990,11 +2314,18 @@ private fun ActionPill(
     filled: Boolean,
     modifier: Modifier = Modifier,
     size: Dp = 50.dp,
+    /** The fill of a [filled] pill. */
+    fillColor: Color = Color.White,
 ) {
     // Resume rather than a flat tap: both start a queue, and the rising pair
     // says so.
     val haptics = rememberHaptics()
-    val content = if (filled) Color.Black else MaterialTheme.colorScheme.onSurface
+    // Black on a light fill, white on a deep one.
+    val content = when {
+        !filled -> MaterialTheme.colorScheme.onSurface
+        fillColor.luminance() > 0.18f -> Color.Black
+        else -> Color.White
+    }
     // Label mengecil bertahap bila tidak muat (font sistem besar, pil sempit).
     var fontScale by remember(label) { mutableFloatStateOf(1f) }
     Row(
@@ -2004,7 +2335,7 @@ private fun ActionPill(
             .clip(CircleShape)
             .then(
                 if (filled) {
-                    Modifier.background(Color.White)
+                    Modifier.background(fillColor)
                 } else {
                     Modifier
                         .background(Color.White.copy(alpha = LIGHT_FILL_ALPHA), CircleShape)
@@ -2111,6 +2442,8 @@ private fun CircleIconButton(
     enabled: Boolean = true,
     /** Glyph size as a fraction of the button; the star needs more than shuffle. */
     iconScale: Float = 0.44f,
+    /** Warna ikon; null atau terlalu gelap memakai warna bawaan. */
+    tint: Color? = null,
 ) {
     val haptics = rememberHaptics()
     Box(
@@ -2133,7 +2466,7 @@ private fun CircleIconButton(
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            tint = MaterialTheme.colorScheme.onSurface,
+            tint = tint?.takeIf { it.luminance() >= 0.08f } ?: MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.size(size * iconScale),
         )
     }
@@ -2332,6 +2665,23 @@ private fun AlbumInfoFooter(
     }
 }
 
+private val ABOUT_URL = Regex("""https?://[^\s<>"]+""")
+
+/** Turns every URL in [text] into a link that opens in the browser. */
+private fun linkedText(text: String, color: Color): AnnotatedString = buildAnnotatedString {
+    append(text)
+    val styles = TextLinkStyles(SpanStyle(color = color, textDecoration = TextDecoration.Underline))
+    ABOUT_URL.findAll(text).forEach { match ->
+        var url = match.value.trimEnd('.', ',', ';', ':', '!', '?', '\'')
+        // A closing bracket belongs to the URL only if the URL opened it.
+        while (url.endsWith(")") && url.count { it == ')' } > url.count { it == '(' }) {
+            url = url.dropLast(1).trimEnd('.', ',')
+        }
+        val start = match.range.first
+        addLink(LinkAnnotation.Url(url, styles), start, start + url.length)
+    }
+}
+
 @Composable
 private fun AboutSection(
     title: String,
@@ -2347,6 +2697,9 @@ private fun AboutSection(
 ) {
     var expanded by remember(text) { mutableStateOf(false) }
     var clipped by remember(text) { mutableStateOf(false) }
+    val linked = remember(text, palette.onBackground) {
+        linkedText(text.orEmpty(), palette.onBackground)
+    }
     Column {
         if (!compact) Text(
             text = title,
@@ -2370,7 +2723,7 @@ private fun AboutSection(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(
-                    text = text,
+                    text = linked,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     color = palette.onBackgroundVariant,
@@ -2390,7 +2743,7 @@ private fun AboutSection(
             }
         }
         if (text != null && !compact) Text(
-            text = text,
+            text = linked,
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Medium,
             color = palette.onBackgroundVariant,

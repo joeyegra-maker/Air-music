@@ -41,6 +41,9 @@ interface PlayerHost {
      */
     fun cachedCanvasOnDisk(song: Song): CanvasArtwork? = null
 
+    /** Drops every cached canvas answer and clip for [song]. Debug panel only. */
+    fun forgetCanvas(song: Song) {}
+
     /** Looks a Canvas up for [song]; null is the normal answer. */
     suspend fun canvasFor(song: Song): CanvasArtwork?
 
@@ -68,6 +71,9 @@ interface PlayerHost {
 
     /** The heights the playing music video offers, and which one is held. */
     val musicVideoQuality: StateFlow<MusicVideoQualityUi> get() = NoVideoQuality
+
+    /** Music videos shown over another version's audio, by the id of that audio. */
+    val musicVideoCompanions: StateFlow<Map<String, String>> get() = NoCompanions
 
     /** Holds the picture at [height] from now on, or lets it choose with null. Remembered. */
     fun setMusicVideoQuality(height: Int?) = Unit
@@ -173,6 +179,8 @@ private val DefaultVideoAspect = MutableStateFlow(16f / 9f)
 
 private val NoVideoQuality = MutableStateFlow(MusicVideoQualityUi())
 
+private val NoCompanions = MutableStateFlow<Map<String, String>>(emptyMap())
+
 /** What the video quality box draws — the web player's VideoQuality, by the same rules. */
 data class MusicVideoQualityUi(
     /** Every height the loaded video offers, largest first. */
@@ -274,6 +282,8 @@ interface PlayerSettingsSource {
     val reduceDynamicBlur: StateFlow<Boolean>
     /** Keeps a full-screen Spotify Canvas playing, blurred live, behind the lyrics and queue. */
     val canvasLiveBlurPanels: StateFlow<Boolean>
+    /** Behind the lyrics and queue, the default backdrop (legacy mesh or blurred cover) instead of the Canvas's last frame. */
+    val canvasPanelDefaultBackdrop: StateFlow<Boolean>
     /** Whether Dolby Atmos is both playable on this device and switched on, so the player can show its badge. */
     val dolbyAtmosActive: StateFlow<Boolean>
     val showNerdStats: StateFlow<Boolean>

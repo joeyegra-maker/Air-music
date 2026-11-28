@@ -1574,6 +1574,16 @@ class PlaybackService : MediaLibraryService() {
                     .setHttpRequestHeaders(serving.headers)
                     .build()
             }
+            // The entry already holds JioSaavn's own bytes, from a play nothing
+            // in this process remembers (a restart, or an expired
+            // [StreamChoice]). Finished by the same URL, never by a new race.
+            AudioCache.keptJioSaavnUrl(dataSpec.key ?: AudioCache.cacheKeyOf(dataSpec.uri))?.let { kept ->
+                NerdStats.recordSource(videoId, "JioSaavn")
+                StreamChoice.remember(videoId, SourceStream(kept), substituted = true)
+                return@Resolver dataSpec.buildUpon()
+                    .setUri(Uri.parse(kept))
+                    .build()
+            }
             // A track queued from YouTube may be held by a source the user
             // ranked above it — see [SourceResolver.substituteForYouTube] and
             // [raceYouTubeOrModule]. Only worth the extra lookup when
@@ -1980,6 +1990,7 @@ class PlaybackService : MediaLibraryService() {
                 }
             },
             analysisRunningFor = { item -> trackAnalyzer.isAnalysing(item.mediaId) },
+            analysisNoteFor = { item -> trackAnalyzer.statusNote(item.mediaId) },
             // The standby is still the spare when this runs — it only becomes
             // the session player at the handoff — so the incoming track is
             // levelled on its own sink before it renders a frame, and the
@@ -1998,7 +2009,7 @@ class PlaybackService : MediaLibraryService() {
                     }
                 }
             },
-            versionSwapActive = { versionSwapJob?.isActive == true },
+            versionSwapActive = { versionSwapJob?.isActive == true || upgradeCrossfadeActive },
             // Direct Source Stream fetches the next track only in the last
             // seconds before the blend, so the marker waits for its audio:
             // a window shown over a track that may still fall back to YouTube
@@ -3676,6 +3687,7 @@ class PlaybackService : MediaLibraryService() {
         // kind the Cached songs folder lists. See [AudioCache.Origin].
         mediaItem?.let { AudioCache.notePlayed(it.toSong(), it.localConfiguration?.uri) }
         scheduleForeignCachePurge()
+        fillAddonCopy(mediaItem?.localConfiguration?.uri?.toString())
         mediaItem?.mediaId?.let { id ->
             resolveLocalBitrate(id, mediaItem)
         }
@@ -4990,6 +5002,12 @@ class PlaybackService : MediaLibraryService() {
                 )
             }
 
+            // Preferred route: bring the upgraded stream up on the standby player and
+            // blend into it, so the old audio keeps sounding while the new decoder and
+            // AudioTrack start. Anything that cannot be blended leaves the playing
+            // stream untouched and falls through to the plain cut below.
+            if (crossfadeUpgrade(mediaId, stream, upgradedUri)) return@withContext
+
             // Fade the old stream out before the cut, so the sink flush is not heard
             // as a click. The fade suspends, so everything that could have changed
             // meanwhile (queue, crossfade, parked stream) is checked again after it,
@@ -5036,6 +5054,7 @@ class PlaybackService : MediaLibraryService() {
             player.prepare()
             fadeInAfterSwap(player, priorVolume)
             QualityUpgrade.unshelve(mediaId)
+            fillAddonCopy(landing.uri)
             TrackLog.d("Zenith", "upgraded to ${stream.format.summary} at ${landing.position}ms ($upgradedSourceName)")
             watchUpgrade(mediaId, landing.uri, landing.position, landing.duration, previousFormat)
             if (QualityUpgrade.continueAfterLossySwap(mediaId)) {
@@ -5118,6 +5137,251 @@ class PlaybackService : MediaLibraryService() {
                 if (!handedOver) runCatching { player.volume = to }
             }
         }
+    }
+
+    /**
+     * True while [crossfadeUpgrade] is using the standby player. Read by
+     * [CrossfadeController] through `versionSwapActive`: both fade across the
+     * same active/standby pair, so they must never run at the same time.
+     */
+    private var upgradeCrossfadeActive = false
+
+    /**
+     * Swaps in the upgraded stream by blending into it on the standby player
+     * instead of rebuilding the one that is playing. The old stream keeps
+     * sounding while the standby opens the AudioTrack and starts its decoder,
+     * so the break `replaceMediaItem` causes is covered by the blend.
+     *
+     * The handoff is [adoptPlayerForUpgrade], which deliberately does not run
+     * [onTrackBecameCurrent]: this is the same song at the same position, so it
+     * must not be scrobbled, recorded, analysed or looked up again.
+     *
+     * Main thread. Returns true only once the upgraded stream is the session
+     * player. Every other outcome leaves the playing stream and its volume as
+     * they were and returns false, so [swapIn] can do the plain cut instead.
+     */
+    private suspend fun crossfadeUpgrade(
+        mediaId: String,
+        stream: SourceStream,
+        upgradedUri: String,
+    ): Boolean {
+        val activePlayer = player ?: return false
+        val standbyPlayer = spare ?: return false
+        if (standbyPlayer === activePlayer) return false
+        // The same refusals an Automix blend makes, plus the pair being busy.
+        if (ListenTogether.state.value.inParty) return false
+        if (BitPerfectOutput.status.value.active) return false
+        if (crossfade?.isTransitioning() == true || versionSwapJob?.isActive == true || upgradeCrossfadeActive) {
+            return false
+        }
+        // Only audible playback has a gap worth covering; a paused track takes the cut.
+        if (!activePlayer.isPlaying || !activePlayer.playWhenReady) return false
+        val currentItem = activePlayer.currentMediaItem ?: return false
+        val currentIndex = activePlayer.currentMediaItemIndex
+        if (currentItem.mediaId != mediaId || currentIndex !in 0 until activePlayer.mediaItemCount) return false
+        val previousUri = currentItem.localConfiguration?.uri?.toString() ?: return false
+        val priorVolume = activePlayer.volume
+        if (priorVolume < 0.05f) return false
+        val previousDuration = activePlayer.duration
+        // Read before anything below can touch it: see [watchUpgrade].
+        val previousFormat = NerdStats.declaredFormat(mediaId)
+        val queueBefore = List(activePlayer.mediaItemCount) { activePlayer.getMediaItemAt(it) }
+        val upgradedMetadata = currentItem.mediaMetadata.buildUpon()
+            .setExtras(Bundle(currentItem.mediaMetadata.extras ?: Bundle()).apply {
+                putBoolean(EXTRA_QUALITY_UPGRADED, true)
+            })
+            .build()
+        val upgradedItem = currentItem.buildUpon()
+            .setUri(upgradedUri)
+            .setMediaMetadata(upgradedMetadata)
+            .withResolvedStreamType(stream.url)
+            .build()
+        val upgradedQueue = queueBefore.mapIndexed { index, item -> if (index == currentIndex) upgradedItem else item }
+
+        // Everything that must still be true for the standby's copy of the queue
+        // to be a faithful replacement. The standby holds a *copy*, so a queue
+        // edit while it loads would be lost at the handoff: any difference
+        // declines the blend and leaves the live queue alone.
+        fun intact(): Boolean =
+            player === activePlayer &&
+                spare === standbyPlayer &&
+                activePlayer.playWhenReady &&
+                activePlayer.currentMediaItemIndex == currentIndex &&
+                activePlayer.currentMediaItem?.mediaId == mediaId &&
+                crossfade?.isTransitioning() != true &&
+                QualityUpgrade.forcedStream(Uri.parse(upgradedUri)) != null &&
+                activePlayer.mediaItemCount == queueBefore.size &&
+                queueBefore.indices.all { activePlayer.getMediaItemAt(it) == queueBefore[it] }
+
+        var committed = false
+        var landedAt = activePlayer.currentPosition
+        upgradeCrossfadeActive = true
+        // The standby reaches its bytes through the resolving data source, which
+        // would record the upgraded format while the old stream is still audible.
+        // Held back the same way an audition is, and recorded below once it plays.
+        QualityUpgrade.beginAudition(mediaId)
+        try {
+            standbyPlayer.stop()
+            standbyPlayer.clearMediaItems()
+            standbyPlayer.skipSilenceEnabled = activePlayer.skipSilenceEnabled
+            standbyPlayer.repeatMode = activePlayer.repeatMode
+            standbyPlayer.shuffleModeEnabled = activePlayer.shuffleModeEnabled
+            standbyPlayer.setPlaybackSpeed(AppSettings.playbackSpeed.value)
+            standbyPlayer.volume = 0f
+            standbyPlayer.setMediaItems(upgradedQueue, currentIndex, activePlayer.currentPosition)
+            spareLoudness().track(mediaId, nextMediaIdOf(standbyPlayer))
+            standbyPlayer.playWhenReady = false
+            standbyPlayer.prepare()
+
+            val readyBy = SystemClock.elapsedRealtime() + UPGRADE_CROSSFADE_READY_MS
+            while (standbyPlayer.playbackState != Player.STATE_READY) {
+                if (!intact() ||
+                    standbyPlayer.playerError != null ||
+                    standbyPlayer.playbackState == Player.STATE_ENDED ||
+                    SystemClock.elapsedRealtime() > readyBy
+                ) {
+                    TrackLog.d("Zenith", "upgrade blend declined: the standby never became ready", about = mediaId)
+                    return false
+                }
+                delay(20)
+            }
+
+            // Start it silently, then put it where the playing stream is *now*:
+            // the near-seek lands inside the buffer it already holds.
+            standbyPlayer.seekTo(currentIndex, activePlayer.currentPosition)
+            standbyPlayer.play()
+            val runningBy = SystemClock.elapsedRealtime() + 600L
+            while (!standbyPlayer.isPlaying) {
+                if (!intact() || standbyPlayer.playerError != null || SystemClock.elapsedRealtime() > runningBy) {
+                    TrackLog.d("Zenith", "upgrade blend declined: the standby would not start", about = mediaId)
+                    return false
+                }
+                delay(10)
+            }
+            standbyPlayer.seekTo(currentIndex, activePlayer.currentPosition)
+            val resyncBy = SystemClock.elapsedRealtime() + 300L
+            while (!(standbyPlayer.playbackState == Player.STATE_READY && standbyPlayer.isPlaying)) {
+                if (!intact() || standbyPlayer.playerError != null || SystemClock.elapsedRealtime() > resyncBy) {
+                    TrackLog.d("Zenith", "upgrade blend declined: the standby did not resync", about = mediaId)
+                    return false
+                }
+                delay(10)
+            }
+            val drift = abs(standbyPlayer.currentPosition - activePlayer.currentPosition)
+            if (drift > UPGRADE_CROSSFADE_MAX_DRIFT_MS) {
+                TrackLog.d("Zenith", "upgrade blend declined: the standby is ${drift}ms off", about = mediaId)
+                return false
+            }
+
+            // Equal-power blend with the same headroom trim a version swap uses.
+            val fadeStart = SystemClock.elapsedRealtime()
+            while (true) {
+                if (!intact() || !standbyPlayer.isPlaying) {
+                    TrackLog.d("Zenith", "upgrade blend abandoned mid-fade", about = mediaId)
+                    return false
+                }
+                val progress = ((SystemClock.elapsedRealtime() - fadeStart).toFloat() / UPGRADE_CROSSFADE_MS)
+                    .coerceIn(0f, 1f)
+                val inGain = sin(progress * (PI / 2.0)).toFloat()
+                val outGain = cos(progress * (PI / 2.0)).toFloat()
+                standbyPlayer.volume = inGain * priorVolume
+                activePlayer.volume = outGain * priorVolume
+                val trim = 1f / sqrt((inGain + outGain).coerceAtLeast(1f))
+                loudnessA.setBlendTrim(trim)
+                loudnessB.setBlendTrim(trim)
+                if (progress >= 1f) break
+                delay(UPGRADE_FADE_STEP_MS)
+            }
+
+            // No suspension between the last check above and the handoff.
+            landedAt = standbyPlayer.currentPosition
+            adoptPlayerForUpgrade(outgoing = activePlayer, incoming = standbyPlayer, volume = priorVolume)
+            committed = true
+        } finally {
+            loudnessA.setBlendTrim(1f)
+            loudnessB.setBlendTrim(1f)
+            QualityUpgrade.endAudition(mediaId)
+            upgradeCrossfadeActive = false
+            if (!committed) {
+                // Includes cancellation: the playing stream gets its volume back
+                // and the standby is left idle for the next transition.
+                runCatching {
+                    standbyPlayer.stop()
+                    standbyPlayer.clearMediaItems()
+                    standbyPlayer.volume = 1f
+                }
+                if (player === activePlayer) runCatching { activePlayer.volume = priorVolume }
+            }
+        }
+
+        // From here the upgraded stream is the session player.
+        val upgradedSourceName = stream.sourceConfigId?.let { SourceRegistry.config(it)?.displayName }
+            ?: "Upgrade"
+        NerdStats.onSourceStream(mediaId, stream.format, upgradedSourceName)
+        NerdStats.recordSource(mediaId, upgradedSourceName)
+        // The standby configured its renderer while the format listener was still
+        // on the other player, so the callback it would have made is made by hand.
+        standbyPlayer.audioFormat?.let { format ->
+            activeTrackIsDolbyAtmos = NerdStats.isDolbyAtmosMime(format.sampleMimeType)
+            applySpatialAudioEnabled()
+            publishNerdStats()
+            currentAudioInputFormat = format
+            applyOutputRoute()
+        }
+        QualityUpgrade.unshelve(mediaId)
+        fillAddonCopy(previousUri)
+        TrackLog.d(
+            "Zenith",
+            "upgraded to ${stream.format.summary} at ${landedAt}ms ($upgradedSourceName), blended in",
+            about = mediaId,
+        )
+        watchUpgrade(mediaId, previousUri, landedAt, previousDuration, previousFormat)
+        if (QualityUpgrade.continueAfterLossySwap(mediaId)) {
+            val firstPass = upgradeJob
+            scope.launch {
+                firstPass?.join()
+                player?.let { lookForBetterCopy(it) }
+            }
+        }
+        scope.launch(Dispatchers.IO) {
+            AudioCache.warmRange(Uri.parse(upgradedUri), 0, ANALYSIS_HEAD_BYTES)
+        }
+        return true
+    }
+
+    /**
+     * Moves the session onto [incoming], which has been playing the upgraded
+     * stream of the current song. The same role swap as
+     * [adoptPlayerForVersionSwap] — session, focus, listeners, filters — but
+     * without [onTrackBecameCurrent]: no track changed, so nothing is booked
+     * against one (scrobble, history, play count, loudness, analysis, lookup).
+     */
+    private fun adoptPlayerForUpgrade(outgoing: ExoPlayer, incoming: ExoPlayer, volume: Float) {
+        setSessionOwner(outgoing, owns = false)
+        setSessionOwner(incoming, owns = true)
+
+        outgoing.removeListener(playbackListener)
+        outgoing.removeAnalyticsListener(formatListener)
+
+        player = incoming
+        spare = outgoing
+
+        val heldFilter = activeFilter
+        activeFilter = spareFilter
+        spareFilter = heldFilter
+
+        incoming.addListener(playbackListener)
+        incoming.addAnalyticsListener(formatListener)
+        adoptFormatOf(incoming)
+
+        mediaSession?.player = newSessionPlayer(incoming, requireNotNull(crossfade))
+
+        incoming.volume = volume
+        outgoing.stop()
+        outgoing.clearMediaItems()
+        outgoing.volume = 1f
+
+        refreshCustomLayouts()
     }
 
     /** Main thread. Null unless [mediaId] is still current and has another upgrade slot. */
@@ -5913,7 +6177,20 @@ class PlaybackService : MediaLibraryService() {
         return false
     }
 
-    private fun currentSourceName(mediaId: String?, mediaItem: MediaItem?): String? {
+    private fun currentSourceName(
+        mediaId: String?,
+        mediaItem: MediaItem?,
+        lossless: Boolean = false,
+    ): String? {
+        val name = recordedSourceName(mediaId, mediaItem)
+        // YouTube only ever serves lossy audio. When the decoder is fed a lossless
+        // codec, a "YouTube" answer is a stale record or the id-length fallback
+        // (e.g. a FLAC replayed from cache after a restart), not the real source.
+        if (lossless && name == "YouTube") return "Addon"
+        return name
+    }
+
+    private fun recordedSourceName(mediaId: String?, mediaItem: MediaItem?): String? {
         val id = mediaId ?: return null
         if (isLocalPlayback(id, mediaItem)) {
             return "Local Storage"
@@ -5958,6 +6235,12 @@ class PlaybackService : MediaLibraryService() {
         // 6. Non-prefixed mediaId fallback to recorded source if any
         val recorded = NerdStats.sourceFor(id)
         if (!recorded.isNullOrBlank()) return recorded
+
+        // 6b. Played straight from a kept addon file: nothing resolved, so no
+        // source was recorded, but the cache entry knows whose bytes it holds.
+        if (uri != null && AudioCache.originOf(uri) == AudioCache.Origin.OTHER) {
+            return "Addon"
+        }
 
         // 7. YouTube video ID
         if (id.length == 11 || uri?.getQueryParameter("v") != null) {
@@ -6061,6 +6344,9 @@ class PlaybackService : MediaLibraryService() {
         val dsd = format?.codecs?.takeIf { it.startsWith("dsd") }
         val dsdRateHz = dsd?.removePrefix("dsd")?.toIntOrNull()?.times(44_100)
         val isLossless = dsd != null || NerdStats.isLosslessMime(format?.sampleMimeType)
+        // YouTube serves neither lossless nor Atmos, so a "YouTube" source name over
+        // either is a stale record or the id-length fallback, not the real source.
+        val beyondYouTube = isLossless || NerdStats.isDolbyAtmosMime(format?.sampleMimeType)
         val isRawPcm = NerdStats.isRawPcm(format?.sampleMimeType)
         val pcmDataRate = measured?.pcmBitrateKbps
 
@@ -6073,6 +6359,12 @@ class PlaybackService : MediaLibraryService() {
                 Pair(localBitrateCache[mediaId], TelemetryProvenance.AUTHORITATIVE)
             dsd == null && isRawPcm && pcmDataRate != null ->
                 Pair(pcmDataRate, TelemetryProvenance.DERIVED)
+            // A lossless track with no declared format was replayed from cache.
+            // The figure YouTube's resolver picked for the same id (Automix's
+            // analysis read fills it) describes a different, lossy stream.
+            isLossless && NerdStats.declaredFormat(mediaId) == null ->
+                measuredStreamKbps(player)?.let { Pair(it, TelemetryProvenance.MEASURED) }
+                    ?: Pair(null, TelemetryProvenance.UNKNOWN)
             else ->
                 NerdStats.sourceBitrate(mediaId) { measuredStreamKbps(player) }
                     ?: Pair(null, TelemetryProvenance.UNKNOWN)
@@ -6082,7 +6374,7 @@ class PlaybackService : MediaLibraryService() {
             com.music.zenith.data.settings.TrackQualityMemory.noteSeen(
                 track = mediaId,
                 lossless = isLossless,
-                sourceName = currentSourceName(mediaId, player.currentMediaItem),
+                sourceName = currentSourceName(mediaId, player.currentMediaItem, beyondYouTube),
             )
         }
 
@@ -6095,7 +6387,7 @@ class PlaybackService : MediaLibraryService() {
             channels = measured?.channels,
             bitDepth = if (dsd != null) 1 else if (isLossless) measured?.bitDepth else null,
             claimed = NerdStats.declaredFormat(mediaId),
-            sourceName = currentSourceName(mediaId, player.currentMediaItem),
+            sourceName = currentSourceName(mediaId, player.currentMediaItem, beyondYouTube),
             container = when (format?.containerMimeType) {
                 "audio/x-dsf" -> "DSF"
                 "audio/x-dff" -> "DFF"
@@ -6383,6 +6675,18 @@ class PlaybackService : MediaLibraryService() {
         MediaWidget.refresh(this)
     }
 
+    private var addonFillJob: Job? = null
+
+    private fun fillAddonCopy(uriString: String?) {
+        addonFillJob?.cancel()
+        val uri = uriString?.let(Uri::parse) ?: return
+        addonFillJob = scope.launch {
+            delay(ADDON_FILL_DELAY_MS)
+            if (AudioCache.originOf(uri) != AudioCache.Origin.OTHER) return@launch
+            AudioCache.fillWhole(uri)
+        }
+    }
+
     private var foreignCachePurgeJob: Job? = null
 
     /**
@@ -6634,7 +6938,12 @@ class PlaybackService : MediaLibraryService() {
         val boundary = crossfade?.plannedTransitionFor(current.mediaId) ?: duration
         val speed = exoPlayer.playbackParameters.speed.coerceAtLeast(MIN_WINDOW_SPEED)
         val remaining = ((boundary - exoPlayer.currentPosition) / speed).toLong()
-        if (remaining > DirectSourceGate.WINDOW_MS) return
+        val window = if (AppSettings.smartFadeEnabled.value) {
+            DirectSourceGate.AUTOMIX_WINDOW_MS
+        } else {
+            DirectSourceGate.WINDOW_MS
+        }
+        if (remaining > window) return
         if (!DirectSourceGate.openNext(next.mediaId)) return
         TrackLog.d(
             "Zenith",
@@ -9570,6 +9879,7 @@ class PlaybackService : MediaLibraryService() {
         const val MEDIA_LIKED_ID = "liked"
         /** See [scheduleForeignCachePurge]: comfortably past the longest crossfade. */
         const val FOREIGN_CACHE_PURGE_DELAY_MS = 30_000L
+        const val ADDON_FILL_DELAY_MS = 6_000L
         /** How many upcoming tracks [scheduleForeignCachePurge] leaves alone for read-ahead and Automix. */
         const val FOREIGN_CACHE_KEEP_AHEAD = 3
         const val MEDIA_DOWNLOADS_ID = "downloads"
@@ -9734,9 +10044,18 @@ class PlaybackService : MediaLibraryService() {
         const val UPGRADE_AFTER_CROSSFADE_MS = 5_000L
 
         /** Fade-out before a quality swap's cut, and fade-in once the new stream plays. */
-        const val UPGRADE_FADE_OUT_MS = 90L
-        const val UPGRADE_FADE_IN_MS = 220L
+        const val UPGRADE_FADE_OUT_MS = 40L
+        const val UPGRADE_FADE_IN_MS = 90L
         const val UPGRADE_FADE_STEP_MS = 10L
+
+        /** Length of the equal-power blend from the old stream into the upgraded one. */
+        const val UPGRADE_CROSSFADE_MS = 220L
+
+        /** How long the standby player gets to buffer the upgraded stream before the swap falls back to a cut. */
+        const val UPGRADE_CROSSFADE_READY_MS = 4_000L
+
+        /** Widest position gap between the two players at which a blend still reads as one song. */
+        const val UPGRADE_CROSSFADE_MAX_DRIFT_MS = 150L
 
         /** How long the fade-in waits for playback to resume before restoring volume anyway. */
         const val UPGRADE_FADE_IN_WAIT_MS = 4_000L

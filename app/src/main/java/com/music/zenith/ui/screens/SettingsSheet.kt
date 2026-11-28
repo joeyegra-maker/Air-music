@@ -164,6 +164,7 @@ import com.music.zenith.data.settings.AppSettings
 import com.music.zenith.data.settings.OutputPcmMode
 import com.music.zenith.data.settings.GlassClarity
 import com.music.zenith.data.settings.GlassPreset
+import com.music.zenith.data.settings.GlassUserPreset
 import com.music.zenith.data.settings.GlassBarMetrics
 import com.music.zenith.data.settings.BitPerfectMode
 import com.music.zenith.playback.AudioOutputStatus
@@ -182,6 +183,7 @@ import com.music.zenith.playback.AudioCache
 import com.music.zenith.ui.player.fullBleedArtworkAvailable
 import androidx.compose.runtime.produceState
 import com.music.zenith.data.canvas.CanvasCache
+import com.music.zenith.data.canvas.CanvasProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -211,7 +213,7 @@ fun SettingsScreen(
     onEqualizer: () -> Unit,
     onOpenReplay: () -> Unit,
     onLyricsSources: () -> Unit,
-    onTranslationLanguage: () -> Unit,
+    onAiTranslate: () -> Unit,
     onSources: () -> Unit,
     onListenTogether: () -> Unit,
     onSpotifyCanvasAuth: () -> Unit,
@@ -273,6 +275,7 @@ fun SettingsScreen(
     val signatureApiUrl by AppSettings.signatureApiUrl.collectAsStateWithLifecycle()
     val fullBleedArtwork by AppSettings.fullBleedArtwork.collectAsStateWithLifecycle()
     val canvasLiveBlurPanels by AppSettings.canvasLiveBlurPanels.collectAsStateWithLifecycle()
+    val canvasPanelDefaultBackdrop by AppSettings.canvasPanelDefaultBackdrop.collectAsStateWithLifecycle()
     val legacyMeshGradient by AppSettings.legacyMeshGradient.collectAsStateWithLifecycle()
     val syncedLyrics by AppSettings.syncedLyrics.collectAsStateWithLifecycle()
     val lyricStrip by AppSettings.lyricStrip.collectAsStateWithLifecycle()
@@ -1986,7 +1989,7 @@ fun SettingsScreen(
                     )
                 }
                 val translationLanguageTitle = stringResource(R.string.translation_language)
-                row(translationLanguageTitle, "lyrics", "translate") {
+                row(translationLanguageTitle, "lyrics", "translate", "ai", "gemini", "groq", "openrouter") {
                     SettingsRow(
                         icon = SfIcons.Translate,
                         title = translationLanguageTitle,
@@ -1999,9 +2002,10 @@ fun SettingsScreen(
                             )
                         },
                         trailing = { Chevron() },
-                        onClick = onTranslationLanguage,
+                        onClick = onAiTranslate,
                     )
                 }
+
             }
             val canvasLiveBlurTitle = stringResource(R.string.canvas_live_blur_panels)
             row(canvasLiveBlurTitle, "canvas", "blur", "lyrics", "queue", "player") {
@@ -2016,6 +2020,21 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { AppSettings.setCanvasLiveBlurPanels(!canvasLiveBlurPanels) },
+                )
+            }
+            val canvasPanelDefaultBackdropTitle = stringResource(R.string.canvas_panel_default_backdrop)
+            row(canvasPanelDefaultBackdropTitle, "canvas", "backdrop", "blur", "mesh", "lyrics", "queue", "player") {
+                SettingsRow(
+                    icon = SfIcons.Gradient,
+                    title = canvasPanelDefaultBackdropTitle,
+                    subtitle = stringResource(R.string.canvas_panel_default_backdrop_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = canvasPanelDefaultBackdrop,
+                            onCheckedChange = AppSettings::setCanvasPanelDefaultBackdrop,
+                        )
+                    },
+                    onClick = { AppSettings.setCanvasPanelDefaultBackdrop(!canvasPanelDefaultBackdrop) },
                 )
             }
             val legacyMeshGradientTitle = stringResource(R.string.legacy_mesh_gradient)
@@ -2066,6 +2085,8 @@ fun SettingsScreen(
                 )
             }
         }
+
+        if (section == SettingsCategory.ABOUT) AboutContent(version = version)
 
         // Read after every group above has had its turn at the query, which is
         // what makes this an accurate "nothing here" rather than a guess.
@@ -2139,7 +2160,7 @@ fun SettingsScreen(
                         color = if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) Color.Black else Color.White,
                         textDecoration = TextDecoration.Underline,
                         modifier = Modifier.clickable {
-                            context.openLink("https://github.com/rezapranata089-bit")
+                            context.openLink("https://www.tiktok.com/@zeux.editz?_r=1&_t=ZS-9BgOcHcAans")
                         },
                     )
                     Text(
@@ -3284,6 +3305,7 @@ enum class SettingsCategory(@param:StringRes val title: Int) {
     YOUR_DATA(R.string.your_data),
     LANGUAGE(R.string.language),
     ADVANCED(R.string.advanced_options),
+    ABOUT(R.string.about_app),
     ;
 
     val icon: ImageVector
@@ -3299,6 +3321,7 @@ enum class SettingsCategory(@param:StringRes val title: Int) {
             YOUR_DATA -> SfIcons.YourData
             LANGUAGE -> SfIcons.Language
             ADVANCED -> SfIcons.Advanced
+            ABOUT -> SfIcons.Info
         }
 }
 
@@ -3332,6 +3355,9 @@ private fun LiquidGlassSettingsContent() {
     val active = liquidGlass && supported
     val lensActive = active && !frosted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
     val bar = GlassBarMetrics.layout
+    val userPresets by AppSettings.glassUserPresets.collectAsStateWithLifecycle()
+    var showSavePresetDialog by remember { mutableStateOf(false) }
+    var presetToDelete by remember { mutableStateOf<GlassUserPreset?>(null) }
     fun step(v: Float) = (v * 2f).roundToInt() / 2f
     fun sizeText(v: Float, unit: String): String {
         val r = (v * 10f).roundToInt() / 10f
@@ -3432,6 +3458,47 @@ private fun LiquidGlassSettingsContent() {
                 onClick = { AppSettings.applyGlassPreset(preset) },
             )
         }
+    }
+
+    SettingsGroup(
+        header = stringResource(R.string.glass_section_my_presets),
+        footer = stringResource(R.string.glass_footer_my_presets),
+    ) {
+        userPresets.forEach { preset ->
+            val selected = preset.matches(clarity.level, frosted, custom, indicator, bar)
+            SettingsRow(
+                title = preset.name,
+                enabled = active,
+                trailing = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (selected) {
+                            Text(
+                                text = "\u2713",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Spacer(Modifier.size(12.dp))
+                        }
+                        Icon(
+                            imageVector = SfIcons.Trash,
+                            contentDescription = stringResource(R.string.delete),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .size(20.dp)
+                                .clickable { presetToDelete = preset },
+                        )
+                    }
+                },
+                onClick = { AppSettings.applyGlassUserPreset(preset) },
+            )
+            RowDivider()
+        }
+        SettingsRow(
+            icon = SfIcons.Add,
+            title = stringResource(R.string.glass_preset_save_current),
+            enabled = active && userPresets.size < AppSettings.GLASS_USER_PRESETS_MAX,
+            onClick = { showSavePresetDialog = true },
+        )
     }
 
     SettingsGroup(header = stringResource(R.string.glass_section_color)) {
@@ -3922,6 +3989,54 @@ private fun LiquidGlassSettingsContent() {
             onClick = { AppSettings.applyGlassPreset(GlassPreset.DEFAULT) },
         )
     }
+    if (showSavePresetDialog) {
+        var nameInput by remember { mutableStateOf("") }
+        MacOSAlertDialog(
+            onDismissRequest = { showSavePresetDialog = false },
+            title = { Text(stringResource(R.string.glass_preset_save_current)) },
+            text = {
+                OutlinedTextField(
+                    value = nameInput,
+                    onValueChange = { nameInput = it.take(AppSettings.GLASS_USER_PRESET_NAME_MAX) },
+                    label = { Text(stringResource(R.string.glass_preset_name)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = nameInput.isNotBlank(),
+                    onClick = {
+                        AppSettings.saveGlassUserPreset(nameInput)
+                        showSavePresetDialog = false
+                    },
+                ) {
+                    Text(stringResource(R.string.save))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSavePresetDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    presetToDelete?.let { preset ->
+        IosConfirmDialog(
+            title = stringResource(R.string.glass_preset_delete_title),
+            message = preset.name,
+            confirmText = stringResource(R.string.delete),
+            dismissText = stringResource(R.string.cancel),
+            destructive = true,
+            onDismiss = { presetToDelete = null },
+            onConfirm = {
+                AppSettings.deleteGlassUserPreset(preset.id)
+                presetToDelete = null
+            },
+        )
+    }
+
     Spacer(Modifier.height(24.dp))
 }
 
@@ -4247,7 +4362,9 @@ fun SettingsChoicePage(
                     SettingsRow(
                         icon = SfIcons.Reorder,
                         title = stringResource(R.string.canvas_provider_order),
-                        subtitle = canvasOrder.joinToString(" › ") { it.label },
+                        subtitle = canvasOrder
+                            .filter { it != CanvasProvider.VIVI }
+                            .joinToString(" › ") { it.label },
                         enabled = animatedCanvas,
                         trailing = { Chevron() },
                         onClick = onCanvasProviders,

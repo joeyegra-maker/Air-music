@@ -18,6 +18,7 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import okhttp3.OkHttpClient
 import com.music.zenith.auth.AuthStore
 import com.music.zenith.data.DebugLog
+import com.music.zenith.data.lyrics.AiLyricsTranslator
 import com.music.zenith.data.lyrics.LyricsTranslation
 import androidx.appcompat.app.AppCompatDelegate
 import com.music.zenith.ui.player.AndroidPlayerHost
@@ -58,6 +59,10 @@ class ZenithApplication : Application(), SingletonImageLoader.Factory, Configura
     @kotlin.OptIn(ExperimentalComposeUiApi::class)
     override fun onCreate() {
         super.onCreate()
+        // CrashActivity hidup di proses ":crash" yang sengaja ringan; inisialisasi
+        // app tidak boleh dijalankan di sana.
+        if (CrashReporter.isCrashProcess()) return
+        CrashReporter.install(this)
         AppIcon.repairLauncher(this)
         // The player is drawn by the shared UI module; this is what it reads
         // underneath — settings, the Canvas decoder, outputs, the party.
@@ -101,6 +106,7 @@ class ZenithApplication : Application(), SingletonImageLoader.Factory, Configura
         Innertube.appLanguage = { AppCompatDelegate.getApplicationLocales().get(0)?.toLanguageTag() }
         migrateScriptOnlyAppLocale()
         LyricsTranslation.cacheDir = cacheDir
+        AiLyricsTranslator.configProvider = { AppSettings.aiTranslate.value }
         // PlaybackService shares this process, so seeding the cookie here means
         // stream resolution is authenticated from the first play onwards.
         authStore = AuthStore(this)

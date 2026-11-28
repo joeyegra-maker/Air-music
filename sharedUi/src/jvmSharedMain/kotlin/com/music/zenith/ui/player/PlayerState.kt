@@ -63,8 +63,9 @@ internal fun rememberCanvasArtwork(song: Song): CanvasArtwork? {
     // which is the flicker. A different song keys differently and starts
     // clean; the same-titled-impostor case is guarded where the clip is
     // adopted, by [CanvasArtwork.matches].
-    var canvas by remember(song.title, song.artist) { mutableStateOf<CanvasArtwork?>(null) }
-    LaunchedEffect(song.videoId, song.albumName, canvasEnabled, canvasAllowedNow, canvasProviderOrder) {
+    val refresh = CanvasFadeTuning.refreshTick.intValue
+    var canvas by remember(song.title, song.artist, refresh) { mutableStateOf<CanvasArtwork?>(null) }
+    LaunchedEffect(song.videoId, song.albumName, canvasEnabled, canvasAllowedNow, canvasProviderOrder, refresh) {
         if (!canvasAllowedNow) {
             // Fitur hidup tapi data seluler tidak diizinkan: hanya klip yang
             // sudah utuh di cache disk yang diputar. Selain itu, still art.
@@ -613,12 +614,46 @@ internal fun rememberArtworkDissolve(
         if (mixingNow && skipFadeNow <= 0L && dissolve.frame == null &&
             PlayerSettings.smartMixView.value != null
         ) {
-            kotlinx.coroutines.flow.combine(
-                PlayerSettings.smartMixProgress,
-                snapshotFlow { mixingNow },
-            ) { p, m -> p to m }.first { (p, m) ->
-                dissolve.progress = p.coerceIn(0f, 1f)
-                p >= 0.999f || !m
+            // The blend's progress arrives in ticks from the audio side, on a
+            // clock of their own and bunched up whenever the main thread is busy
+            // mixing. Written straight into [progress], the cover morph stepped
+            // with them. Chased once per frame instead, so it moves at the
+            // display's rate however the ticks land.
+            // Progres audio berhenti sejenak tiap seek fase (re-buffer 95-180ms) dan
+            // melompat sesudahnya. Dipakai mentah, morph cover ikut membeku lalu
+            // loncat. Jadi cover berjalan sendiri sesuai jam layar pada laju
+            // 1 / lama mix, dan progres audio hanya mengoreksinya pelan-pelan.
+            // Kalau progres audio diam lebih lama dari jeda seek (pause), cover
+            // ikut berhenti. Tanpa lama mix yang diketahui, perilakunya sama
+            // seperti pengejar biasa.
+            val ratePerSec = if (mixFadeNow > 0L) 1000f / mixFadeNow else 0f
+            val correctPerSec = if (ratePerSec > 0f) MIX_PROGRESS_CORRECT_PER_SEC else MIX_PROGRESS_CHASE_PER_SEC
+            var lastFrame = androidx.compose.runtime.withFrameNanos { it }
+            var lastTarget = PlayerSettings.smartMixProgress.value.coerceIn(0f, 1f)
+            var lastMovedAt = lastFrame
+            while (true) {
+                val now = androidx.compose.runtime.withFrameNanos { it }
+                val dt = ((now - lastFrame) / 1_000_000_000f).coerceIn(0f, 0.1f)
+                lastFrame = now
+                if (!mixingNow) break
+                val target = PlayerSettings.smartMixProgress.value.coerceIn(0f, 1f)
+                if (target != lastTarget) {
+                    lastTarget = target
+                    lastMovedAt = now
+                }
+                val advancing = now - lastMovedAt < MIX_PROGRESS_STALL_NANOS
+                var shown = dissolve.progress
+                if (advancing) shown += ratePerSec * dt
+                // Selisih besar (cover baru baru termuat, mix sudah berjalan) dikejar
+                // cepat; selisih kecil dikoreksi pelan supaya hentian audio tak terlihat.
+                val chase = if (kotlin.math.abs(target - shown) > MIX_PROGRESS_SNAP_ERROR) {
+                    MIX_PROGRESS_CHASE_PER_SEC
+                } else {
+                    correctPerSec
+                }
+                shown += (target - shown) * (1f - kotlin.math.exp(-dt * chase))
+                dissolve.progress = shown.coerceIn(0f, minOf(1f, target + MIX_PROGRESS_MAX_LEAD))
+                if (target >= 0.999f && dissolve.progress >= 0.995f) break
             }
             dissolve.progress = 1f
             dissolve.finish()
@@ -648,6 +683,21 @@ internal class HeldClipFrame(val portrait: Boolean, val bannerHeightPx: Float, v
 /** Selama progres sapuan masih di bawah ini, cover lama dianggap masih penuh terlihat. */
 private const val RETARGET_KEEP_PROGRESS = 0.3f
 private const val MIX_DISSOLVE_MS = 1_800
+
+/** How quickly the cover morph catches up with the blend's published progress, per second. */
+private const val MIX_PROGRESS_CHASE_PER_SEC = 14f
+
+/** Koreksi pelan ke progres audio selama morph cover berjalan sendiri, per detik. */
+private const val MIX_PROGRESS_CORRECT_PER_SEC = 4f
+
+/** Selisih morph dan audio di atas ini dikejar cepat, bukan dikoreksi pelan. */
+private const val MIX_PROGRESS_SNAP_ERROR = 0.08f
+
+/** Seberapa jauh morph boleh mendahului progres audio. */
+private const val MIX_PROGRESS_MAX_LEAD = 0.02f
+
+/** Progres audio diam lebih lama dari ini dianggap berhenti (pause), bukan seek. */
+private const val MIX_PROGRESS_STALL_NANOS = 400_000_000L
 private const val SKIP_DISSOLVE_MS = 950
 private const val FLUID_DISSOLVE_MS = 1_000
 private const val FRAME_DISSOLVE_MS = 1_100

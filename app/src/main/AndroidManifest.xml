@@ -94,6 +94,16 @@
             android:name="com.samsung.android.support.ongoing_activity"
             android:value="true" />
 
+        <!-- Halaman laporan crash, di proses terpisah supaya tetap hidup saat proses utama mati. -->
+        <activity
+            android:name=".CrashActivity"
+            android:exported="false"
+            android:process=":crash"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:theme="@style/Theme.Zenith" />
+
         <service
             android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
             android:enabled="false"

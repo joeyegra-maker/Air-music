@@ -200,6 +200,7 @@ internal suspend fun exportLyricsVideo(
     }
 
     if (opus != null && attempt(withAudio = true)) return out
+    Log.w(TAG, "lyrics video falls back to silent: synced=${timeline != null}, opus=${opus != null}")
     return if (attempt(withAudio = false)) out else null
 }
 
@@ -273,8 +274,14 @@ private class RoutingSourceFactory(
     override fun getSupportedTypes(): IntArray = plain.supportedTypes
 
     override fun createMediaSource(mediaItem: MediaItem): MediaSource =
-        if (mediaItem.localConfiguration?.tag === SongAudio) song.createMediaSource(mediaItem)
+        if (isSongItem(mediaItem)) song.createMediaSource(mediaItem)
         else plain.createMediaSource(mediaItem)
+
+    /** By its tag, or by the `zenith://` address only the player's own chain can open, should the tag not survive. */
+    private fun isSongItem(mediaItem: MediaItem): Boolean {
+        val local = mediaItem.localConfiguration ?: return false
+        return local.tag === SongAudio || local.uri.scheme == "zenith"
+    }
 }
 
 /** Marks the song's own items for [RoutingSourceFactory]. */
@@ -504,8 +511,8 @@ private const val PROBE_TIMEOUT_MS = 10_000L
 /** At quarter size: about the blur the preview draws at full size. */
 private const val BLUR_SIGMA = 12f
 
-/** The clip at 60%: about as dark as the card's own backdrop, so white type reads. */
-private const val DIM = 0.6f
+/** The clip at 38%: darker than the card's own backdrop, so white type reads over a busy canvas. */
+private const val DIM = 0.38f
 
 /** Comfortably past what Instagram re-encodes a 1080p story to. */
 private const val VIDEO_BITRATE = 10_000_000

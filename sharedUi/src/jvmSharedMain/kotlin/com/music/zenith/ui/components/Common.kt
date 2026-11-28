@@ -112,6 +112,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.text.style.TextAlign
@@ -396,10 +397,15 @@ fun SongRow(
     showDuration: Boolean = true,
     /** Menandai lagu populer album dengan titik kecil di sebelah nomor trek, seperti Apple Music. */
     popular: Boolean = false,
+    /** Warna panel geser; null memakai warna tema. */
+    swipeTint: Color? = null,
+    /** Warna bintang lagu populer; null memakai warna subtitle. */
+    popularTint: Color? = null,
 ) {
     SwipeToQueueBox(
         onSwipeToQueue = onSwipeToQueue,
         modifier = modifier,
+        tint = swipeTint,
     ) {
         SongRowContent(
             song = song,
@@ -420,6 +426,7 @@ fun SongRow(
             hideArtistOf = hideArtistOf,
             showDuration = showDuration,
             popular = popular,
+            popularTint = popularTint,
         )
     }
 }
@@ -435,6 +442,7 @@ fun SwipeToQueueBox(
     onSwipeToQueue: (() -> Unit)?,
     modifier: Modifier = Modifier,
     destructive: Boolean = false,
+    tint: Color? = null,
     content: @Composable () -> Unit,
 ) {
     if (onSwipeToQueue == null) {
@@ -575,7 +583,7 @@ fun SwipeToQueueBox(
                     0f
                 }
             },
-        backgroundContent = { QueueSwipeBackground(swipeState, armedState, destructive) },
+        backgroundContent = { QueueSwipeBackground(swipeState, armedState, destructive, tint) },
     ) {
         content()
     }
@@ -583,9 +591,13 @@ fun SwipeToQueueBox(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun QueueSwipeBackground(swipeState: SwipeToDismissBoxState, armed: Boolean, destructive: Boolean) {
+private fun QueueSwipeBackground(swipeState: SwipeToDismissBoxState, armed: Boolean, destructive: Boolean, tint: Color?) {
     val playNext by AppUi.host.swipeToPlayNext.collectAsStateWithLifecycle()
-    val primary = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+    val primary = if (destructive) {
+        MaterialTheme.colorScheme.error
+    } else {
+        tint ?: MaterialTheme.colorScheme.primary
+    }
     // The panel brightens as the swipe arms, so it says "let go now" itself.
     val glow by animateFloatAsState(
         targetValue = if (armed) 1f else 0f,
@@ -677,15 +689,19 @@ private fun QueueSwipeBackground(swipeState: SwipeToDismissBoxState, armed: Bool
                 Arrangement.Start
             },
         ) {
-            QueueSwipeLabel(playNext, swipeState, armed, destructive)
+            QueueSwipeLabel(playNext, swipeState, armed, destructive, tint)
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun QueueSwipeLabel(playNext: Boolean, swipeState: SwipeToDismissBoxState, armed: Boolean, destructive: Boolean) {
-    val primary = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+private fun QueueSwipeLabel(playNext: Boolean, swipeState: SwipeToDismissBoxState, armed: Boolean, destructive: Boolean, tint: Color?) {
+    val primary = if (destructive) {
+        MaterialTheme.colorScheme.error
+    } else {
+        tint ?: MaterialTheme.colorScheme.primary
+    }
     // The badge pops when the swipe arms and fills solid, like a button
     // pressed in.
     val pop by animateFloatAsState(
@@ -695,7 +711,12 @@ private fun QueueSwipeLabel(playNext: Boolean, swipeState: SwipeToDismissBoxStat
     )
     val iconTint by animateColorAsState(
         targetValue = if (armed) {
-            if (destructive) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary
+            when {
+                destructive -> MaterialTheme.colorScheme.onError
+                tint == null -> MaterialTheme.colorScheme.onPrimary
+                tint.luminance() > 0.18f -> Color.Black
+                else -> Color.White
+            }
         } else {
             primary
         },
@@ -807,6 +828,7 @@ private fun SongRowContent(
     hideArtistOf: String? = null,
     showDuration: Boolean = true,
     popular: Boolean = false,
+    popularTint: Color? = null,
 ) {
     val titleColor by animateColorAsState(
         targetValue = if (isCurrent && !searchPlayingStyle) activeTint else MaterialTheme.colorScheme.onBackground,
@@ -847,14 +869,15 @@ private fun SongRowContent(
                 contentAlignment = Alignment.Center,
             ) {
                 if (popular) {
-                    // Penanda lagu populer: titik kecil di gutter kiri nomor.
-                    Box(
-                        Modifier
+                    // Penanda lagu populer: bintang kecil di gutter kiri nomor.
+                    Icon(
+                        imageVector = ZenithIcons.StarFilled,
+                        contentDescription = null,
+                        tint = popularTint ?: subtitleColor.copy(alpha = 0.7f),
+                        modifier = Modifier
                             .align(Alignment.CenterStart)
-                            .offset(x = -(PAGE_GUTTER / 2) - 2.dp)
-                            .size(4.dp)
-                            .clip(CircleShape)
-                            .background(subtitleColor.copy(alpha = 0.7f)),
+                            .offset(x = -(PAGE_GUTTER / 2) - 5.dp)
+                            .size(10.dp),
                     )
                 }
                 if (searchPlayingStyle && isCurrent && isPlaying) {

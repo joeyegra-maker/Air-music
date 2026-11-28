@@ -61,13 +61,14 @@ fun lyricsGlassDiscSurface(active: Boolean, source: Backdrop): Modifier? {
     if (!glassOn || reduceDynamicBlur) return null
 
     val shape = CircleShape
-    val tintAlpha = ((lyricsClarity.tintAlpha + 0.10f * lift) * lyricsCustom.tint).coerceIn(0f, 1f)
+    // Tint putih tipis, sama dengan disc fallback, supaya tombol tidak menghitam di atas player.
+    val tintAlpha = (0.14f + 0.10f * lift).coerceIn(0f, 1f)
     return Modifier
         .glassJelly()
         .clip(shape)
         .liquidGlass(
             shape = shape,
-            surfaceTint = Color(0xFF121212).copy(alpha = tintAlpha),
+            surfaceTint = Color.White.copy(alpha = tintAlpha),
             source = source,
             clarityOverride = lyricsClarity,
             customOverride = lyricsCustom,

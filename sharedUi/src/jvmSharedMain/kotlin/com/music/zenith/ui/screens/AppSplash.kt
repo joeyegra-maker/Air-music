@@ -48,8 +48,15 @@ private val SPLASH_NUDGE_DOWN = 4.dp
 /** The logo's height against the word's font size, as for the plain mark. */
 private const val SPLASH_MARK_TO_FONT = 0.83f
 
-/** How far the mark sits below the row's centre, as a share of the word's font size. */
-private const val SPLASH_MARK_DROP_TO_FONT = 0.05f
+/**
+ * The word's cap height as a share of its font size. The mark is centred on the capitals and
+ * aligned to the text baseline, so it follows the real glyphs rather than the font's line box,
+ * whose ascent and descent differ between device fonts.
+ */
+private const val SPLASH_CAP_TO_FONT = 0.72f
+
+/** Small optical drop for the mark, as a share of the word's font size. */
+private const val SPLASH_MARK_NUDGE_TO_FONT = 0.04f
 
 /**
  * A full-screen splash in Apple Music's manner: a red gradient from a lighter
@@ -88,12 +95,14 @@ fun AppSplash(
             contentAlignment = Alignment.Center,
         ) {
             val font = maxWidth * SPLASH_FONT_WIDTH_SHARE
+            val capPx = with(LocalDensity.current) { (font * SPLASH_CAP_TO_FONT).toPx() }
+            val nudgePx = with(LocalDensity.current) { (font * SPLASH_MARK_NUDGE_TO_FONT).toPx() }
             if (mark != null) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(font * SPLASH_GAP_TO_FONT),
                 ) {
-                    Box(Modifier.offset(y = font * SPLASH_MARK_DROP_TO_FONT)) {
+                    Box(Modifier.alignBy { ((it.measuredHeight + capPx) / 2 - nudgePx).toInt() }) {
                         mark(font * SPLASH_MARK_TO_FONT)
                     }
                     Text(
@@ -102,6 +111,7 @@ fun AppSplash(
                         fontSize = with(LocalDensity.current) { font.toSp() },
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
+                        modifier = Modifier.alignByBaseline(),
                     )
                 }
             } else {

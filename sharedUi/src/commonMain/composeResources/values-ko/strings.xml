@@ -91,6 +91,7 @@
     <string name="lyrics_romanized">로마자 발음</string>
     <string name="lyrics_saved_with_download">이 다운로드와 함께 가사를 저장했어요</string>
     <string name="lyrics_share_pick_limit">카드가 가득 찼어요</string>
+    <string name="lyrics_share_pick_in_row">줄은 이어져 있어야 해요</string>
     <string name="lyrics_translated_to">%1$s(으)로 번역됨</string>
     <string name="lyrics_translation_unavailable">지금은 번역을 사용할 수 없어요</string>
     <string name="mono">모노</string>
@@ -156,7 +157,6 @@
     <string name="recent_search_edit">“%1$s” 수정</string>
     <string name="recent_search_remove">최근 검색어에서 “%1$s” 삭제</string>
     <string name="recent_searches">최근 검색어</string>
-    <string name="replay_subtitle">내 인기 곡, 아티스트, 앨범, 장르</string>
     <string name="retry">다시 시도</string>
     <string name="saved_to_youtube_music">YouTube Music에 저장됨</string>
     <string name="search">검색</string>
@@ -204,8 +204,6 @@
     <string name="sign_in">로그인</string>
     <string name="sign_in_youtube_music">YouTube Music에 로그인</string>
     <string name="subscriptions">구독</string>
-    <string name="your_replay">나의 리플레이</string>
-    <string name="default_replay_holder">Zenith 리스너</string>
     <string name="import_spotify">Spotify 가져오기</string>
     <string name="import_spotify_subtitle">재생목록 링크에서</string>
     <string name="sign_in_with_google">Google로 로그인</string>

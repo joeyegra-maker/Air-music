@@ -39,7 +39,6 @@
     <string name="on_device">기기 내</string>
     <string name="playlists">재생목록</string>
     <string name="new_playlist">새 재생목록</string>
-    <string name="saved_to_youtube_music">YouTube Music에 저장됨</string>
     <string name="sign_in">로그인</string>
     <string name="sign_out">로그아웃</string>
     <string name="signed_in">로그인됨</string>
@@ -85,14 +84,9 @@
     <string name="artists">아티스트</string>
     <string name="albums">앨범</string>
 
-    <string name="search_empty">YouTube Music에서 수백만 곡을 검색하세요.</string>
-    <string name="recent_searches">최근 검색어</string>
     <string name="clear">지우기</string>
-    <string name="search_hint">아티스트, 곡, 가사 등</string>
     <string name="settings_search_hint">설정 검색</string>
     <string name="settings_search_empty">“%1$s”와(과) 일치하는 설정이 없어요</string>
-    <string name="recent_search_edit">“%1$s” 수정</string>
-    <string name="recent_search_remove">최근 검색어에서 “%1$s” 삭제</string>
     <string name="storage_required_save">곡을 저장하려면 저장소 접근 권한이 필요해요</string>
     <string name="storage_required_read">로컬 오디오 파일을 읽으려면 저장소 권한이 필요해요</string>
 
@@ -103,8 +97,6 @@
     <string name="source">소스</string>
     <string name="direct_source_stream">직접 소스 스트림</string>
     <string name="direct_source_stream_in_party">함께 듣기 파티 중에는 꺼져 있어요</string>
-
-    <string name="overridden">재정의됨</string>
 
     <string name="remove_source">이 소스 삭제</string>
     <string name="test">테스트</string>
@@ -194,8 +186,7 @@
     <string name="spatial_audio">공간 오디오</string>
     <string name="spatial_audio_subtitle">스테레오 트랙을 넓혀 더 몰입감 있게 들려줘요</string>
     <string name="spatial_audio_atmos_subtitle">이 트랙은 일시 중지됨 — Dolby Atmos는 이미 공간 오디오예요</string>
-    <string name="spatial_audio_prefer_off">공간 오디오 끄기 선호</string>
-    <string name="spatial_audio_prefer_on">공간 오디오 켜기 선호</string>
+    <string name="spatial_audio_this_song_only">이 곡만</string>
     <string name="animated_cover_cellular">모바일 데이터로 움직이는 커버 재생</string>
     <string name="replay">리플레이</string>
     <string name="replay_subtitle">내 인기 곡, 아티스트, 앨범, 장르</string>
@@ -211,15 +202,54 @@
     <string name="top_genres">인기 장르</string>
     <string name="cancel_all">모두 취소</string>
     <string name="language">언어</string>
+    <string name="crash_title">오류로 인해 Zenith가 중지되었습니다</string>
+    <string name="crash_subtitle">보고서를 복사해 개발자에게 보내 주세요. 충돌 전에 무엇을 했는지도 알려 주세요.</string>
+    <string name="crash_cause">원인</string>
+    <string name="crash_location">오류 위치</string>
+    <string name="crash_device">기기</string>
+    <string name="crash_app">앱</string>
+    <string name="crash_full_report">전체 보고서</string>
+    <string name="crash_show">보기</string>
+    <string name="crash_hide">숨기기</string>
+    <string name="crash_copy_report">보고서 복사</string>
+    <string name="crash_copy_summary">요약 복사</string>
+    <string name="crash_share">공유</string>
+    <string name="crash_restart">다시 열기</string>
+    <string name="crash_close">닫기</string>
+    <string name="crash_copied_report">전체 보고서를 복사했습니다</string>
+    <string name="crash_copied_summary">요약을 복사했습니다</string>
+    <string name="crash_copy_failed">복사하지 못했습니다. 공유를 사용하세요</string>
+    <string name="crash_share_title">보고서 공유</string>
+    <string name="crash_unreadable">보고서를 읽을 수 없습니다: %1$s</string>
+    <string name="crash_phone">휴대전화</string>
+    <string name="crash_brand">브랜드 / 코드</string>
+    <string name="crash_chipset">칩셋</string>
+    <string name="crash_arch">아키텍처</string>
+    <string name="crash_android">Android</string>
+    <string name="crash_patch">보안 패치</string>
+    <string name="crash_system_build">시스템 빌드</string>
+    <string name="crash_screen">화면</string>
+    <string name="crash_ram">RAM</string>
+    <string name="crash_storage">저장공간</string>
+    <string name="crash_battery">배터리</string>
+    <string name="crash_network">네트워크</string>
+    <string name="crash_language">언어</string>
+    <string name="crash_version">버전</string>
+    <string name="crash_build_type">빌드 유형</string>
+    <string name="crash_package">패키지</string>
+    <string name="crash_time">충돌 시각</string>
+    <string name="crash_thread">스레드</string>
+    <string name="crash_uptime">실행 시간</string>
+    <string name="crash_free_of">%2$s 중 %1$s 사용 가능</string>
+    <string name="crash_seconds">%1$s초</string>
+    <string name="crash_cellular">모바일 데이터</string>
+    <string name="crash_none">없음</string>
+    <string name="crash_other">기타</string>
     <string name="app_language">앱 언어</string>
     <string name="app_language_description">Zenith에서 사용할 언어를 선택해 주세요.</string>
     <string name="english">영어</string>
 
-    <string name="polish">폴란드어</string>
-
     <string name="indonesian">인도네시아어</string>
-    <string name="hindi">힌디어</string>
-
     <string name="korean">한국어</string>
     <string name="show_all">모두 보기</string>
 
@@ -259,16 +289,10 @@
     <string name="auto_music_only">비디오보다 오디오</string>
     <string name="auto_music_only_subtitle">뮤직비디오를 자동으로 오디오로 재생해요</string>
     <string name="content_feed">콘텐츠 및 피드</string>
-    <string name="hide_home_recents">최근 재생 숨기기</string>
-
     <string name="hide_home_videos">홈에서 비디오 숨기기</string>
     <string name="hide_home_videos_subtitle">비디오로만 된 줄도 함께 사라져요. 검색, 아티스트, 플레이리스트에는 계속 표시돼요</string>
     <string name="hide_home_branding">홈 브랜딩 숨기기</string>
     <string name="hide_home_branding_subtitle">로고 없이 홈 제목만 표시해요</string>
-    <string name="hide_home_top_picks">추천 선곡 숨기기</string>
-
-    <string name="hide_home_moods">무드 숨기기</string>
-
     <string name="customize_home">홈 구성 맞추기</string>
     <string name="customize_home_subtitle">줄 순서를 바꾸고 보일 줄을 골라요</string>
     <string name="home_layout_description">손잡이를 끌어 줄을 옮겨요. 체크를 해제하면 홈에서 숨겨져요.</string>
@@ -380,6 +404,11 @@
     <string name="glass_section_preset">투명도 프리셋</string>
     <string name="glass_section_ready_presets">글래스 프리셋</string>
     <string name="glass_footer_ready_presets">여러 값을 한 번에 바꿔요. 아래 슬라이더로 더 다듬을 수 있어요.</string>
+    <string name="glass_section_my_presets">내 프리셋</string>
+    <string name="glass_footer_my_presets">현재 글래스 설정을 내비게이션 바 크기까지 저장해요. 같은 이름으로 저장하면 기존 프리셋을 덮어써요.</string>
+    <string name="glass_preset_save_current">현재 설정을 프리셋으로 저장</string>
+    <string name="glass_preset_name">프리셋 이름</string>
+    <string name="glass_preset_delete_title">프리셋 삭제</string>
     <string name="glass_preset_default">기본</string>
     <string name="glass_preset_default_subtitle">Zenith 기본 글래스</string>
 
@@ -494,7 +523,6 @@
     <string name="high_performance_mode">고성능 모드</string>
     <string name="high_performance_subtitle">모든 애니메이션과 블러를 사용하고 더 높은 화면 주사율을 요청해요</string>
     <string name="high_performance_active">%1$d Hz를 요청했어요. 필요하면 Android가 낮출 수 있어요.</string>
-    <string name="beta">베타</string>
     <string name="refresh_rate">주사율</string>
     <string name="high_performance_before_enabling">켜기 전에 확인하세요</string>
     <string name="high_performance_battery_warning">먼저 Zenith의 배터리 사용을 “제한 없음”으로 설정하세요. 주사율이 높으면 배터리, CPU, GPU를 더 많이 사용하고 기기가 따뜻해질 수 있어요.</string>
@@ -603,7 +631,6 @@
     <string name="wifi_only_download_refusal">다운로드는 Wi-Fi로만 가능해요. 모바일 데이터를 사용하려면 설정에서 이 옵션을 끄세요.</string>
     <string name="pinned_playlist_limit">플레이리스트는 %1$d개까지만 고정할 수 있어요</string>
     <string name="downloaded_playlist">다운로드한 플레이리스트</string>
-    <string name="library_sign_in_description">Google 계정에 로그인하면 좋아요 표시한 곡, 플레이리스트, YouTube Music 기록을 볼 수 있어요.</string>
     <string name="downloads_progress">다운로드 · %1$d%%</string>
     <string name="downloads_finished">다운로드 · 완료</string>
     <string name="downloading_progress">다운로드 중 · %1$d%%</string>
@@ -772,8 +799,6 @@
     <string name="spotify_canvas_setup_steps">1. 브라우저에서 open.spotify.com에 로그인하세요.\n2. 개발자 도구를 열고 Application, Cookies로 이동하세요.\n3. sp_dc 쿠키의 값을 복사하세요.\n4. 아래에 붙여넣으세요.</string>
     <string name="spotify_canvas_auto_hide">플레이어 컨트롤 자동 숨기기</string>
     <string name="spotify_canvas_auto_hide_subtitle">Spotify Canvas 재생 중 5초 후 하프 플레이어를 접어요</string>
-    <string name="prioritize_spotify_canvas">Spotify Canvas 우선 사용</string>
-    <string name="prioritize_spotify_canvas_subtitle">Apple Music 및 다른 움직이는 커버 제공처보다 Spotify를 먼저 시도해요</string>
     <string name="canvas_provider_order">캔버스 제공처 순서</string>
     <string name="canvas_provider_order_subtitle">위에서 아래로 차례로 확인해 곡의 캔버스가 있는 곳을 사용해요</string>
     <string name="status">상태</string>
@@ -812,6 +837,7 @@
     <string name="lyrics_share_description">선택한 줄을 커버와 함께 카드로 만들어요.</string>
     <string name="lyrics_share_story">스토리로 만들기</string>
     <string name="lyrics_share_show_logo">Zenith 로고 표시</string>
+    <string name="lyrics_share_show_quality">오디오 품질 표시</string>
     <string name="lyrics_share_story_revert">카드로 돌아가기</string>
     <string name="lyrics_share_video">동영상</string>
     <string name="lyrics_share_image">이미지</string>
@@ -828,7 +854,6 @@
     <string name="not_enough_listening">아직 청취 기록이 부족해요</string>
     <string name="not_enough_this_month">이번 달에 몇 곡 더 재생하면 Replay가 열려요.</string>
     <string name="not_enough_this_week">이번 주에 몇 곡 더 재생하면 Replay가 열려요.</string>
-    <string name="pinned">고정됨</string>
     <string name="replay_across">총</string>
     <string name="replay_empty_description">조금 더 들으면 Zenith가 청취 기록을 Replay로 만들어 드려요.</string>
     <string name="replay_habits_middle">·</string>
@@ -865,6 +890,8 @@
     <string name="sort_music">음악 정렬</string>
     <string name="sort_title_ascending">이름순 (오름차순)</string>
     <string name="sort_title_descending">이름순 (내림차순)</string>
+    <string name="sort_artist_ascending">아티스트순 (오름차순)</string>
+    <string name="sort_album_ascending">앨범순 (오름차순)</string>
     <string name="sort_date_added">추가한 날짜 (최신순)</string>
     <string name="sort_date_added_oldest">추가한 날짜 (오래된 순)</string>
     <string name="sort_date_added_toggle">추가한 날짜</string>
@@ -901,7 +928,6 @@
     <string name="smb_disconnect">연결 해제</string>
     <string name="smb_test_failed">연결할 수 없어요: %1$s</string>
     <string name="playlist">플레이리스트</string>
-    <string name="playlist_action">플레이리스트</string>
     <string name="open">열기</string>
     <string name="open_playlist">플레이리스트 열기</string>
     <string name="pin">고정</string>
@@ -912,8 +938,6 @@
     <string name="delete_download">다운로드 삭제</string>
     <string name="delete_playlist_confirmation">“%1$s” 삭제할까요? 확인하려면 다시 탭하세요.</string>
     <string name="delete_download_confirmation">이 기기에서 “%1$s” 삭제할까요? 확인하려면 다시 탭하세요.</string>
-    <string name="running">실행 중</string>
-
     <string name="automix_enabled_subtitle">곡 자체를 분석해 모든 전환의 타이밍과 블렌딩을 맞춰요. 기기가 뜨거워지거나 재생이 끊기면 꺼 주세요.</string>
     <string name="automix_model_title">Automix 모델 다운로드</string>
     <string name="automix_model_message">Automix에는 작은 분석 모델 두 개(약 30MB)가 필요해요. 한 번만 다운로드하며 이 기기에 저장돼요.</string>
@@ -953,20 +977,16 @@
     <string name="all_time">전체 기간</string>
     <string name="switch_account">계정 전환</string>
     <string name="accounts">계정</string>
-    <string name="profiles">프로필</string>
     <string name="personal">개인</string>
     <string name="brand_account">브랜드 계정</string>
     <string name="add_account">계정 추가</string>
-    <string name="manage_accounts">계정 관리</string>
-
     <string name="selected_account">선택한 계정</string>
-    <string name="listen_as">청취 프로필</string>
+    <string name="shelf_new_releases">신규 발매</string>
     <string name="edit_profile">프로필 편집</string>
     <string name="profile_display_name">표시 이름</string>
     <string name="profile_change_photo">사진 변경</string>
     <string name="profile_reset">Google 프로필로 재설정</string>
     <string name="profile_local_only_note">이 앱에서만 표시돼요. Google 계정은 변경되지 않아요.</string>
-    <string name="default_youtube_profile">YouTube Music 기본 프로필</string>
     <string name="account_profiles_help">Google 계정에는 개인 프로필과 브랜드 프로필이 있을 수 있어요. 각각 보관함, 좋아요, 기록이 따로 있어요.</string>
     <string name="choose_profile">프로필 선택</string>
     <string name="use_this_profile">이 프로필 사용</string>
@@ -1070,7 +1090,6 @@
     <string name="bit_perfect_output">비트 퍼펙트 출력</string>
     <string name="bit_perfect_bypassed_footer">비트 퍼펙트 출력이 준비되어 흐리게 표시된 설정은 우회되고 Dolby Atmos 버전은 요청되지 않아요. DAC를 분리하거나 모드를 끄면 다시 작동해요.</string>
     <string name="rich_presence">리치 프레즌스</string>
-    <string name="japanese">일본어</string>
     <string name="bit_perfect_sheet_warning">트랙을 변환 없이 DAC로 보내요. 이퀄라이저, 음량 평준화, 크로스페이드, Automix, 재생 속도, Zenith 볼륨은 적용되지 않아요.</string>
     <string name="bit_perfect_mode_off_subtitle">오디오가 Android 믹서와 Zenith 효과를 거쳐요.</string>
     <string name="bit_perfect_mode_usb_android_subtitle">Android 14는 믹싱이나 리샘플링 없이 각 트랙의 샘플레이트와 비트 심도로 DAC를 열어요.</string>
@@ -1108,8 +1127,8 @@
     <string name="lyrics_sparkle">가사 반짝임</string>
     <string name="lyrics_sparkle_subtitle">LiquidFlow에서 길게 끄는 글자 주변에 작은 반짝임을 표시해요</string>
     <string name="advanced_options">고급 및 실험 옵션</string>
+    <string name="about_app">정보</string>
 
-    <string name="subscriptions">구독</string>
     <string name="source_needs_lossless_output">무손실 출력이 필요해요 · 무손실을 지원하는 기기를 사용하세요</string>
     <string name="source_needs_lossless_bt_codec">무손실 출력이 필요해요 · Bluetooth가 %1$s를 사용 중이에요. 무손실을 지원하는 기기를 사용하세요</string>
     <string name="source_needs_lossless_bt_unknown">무손실 출력이 필요해요 · 사용 중인 Bluetooth 코덱을 알 수 없어요</string>
@@ -1134,8 +1153,6 @@
     <string name="song_cache_unlimited_subtitle">제한이 없어요. 저장 공간이 가득 찰 때까지 캐시된 오디오가 계속 늘어날 수 있어요.</string>
     <string name="clear_song_cache_title">노래 캐시를 지울까요?</string>
     <string name="clear_song_cache_warning">캐시된 노래가 모두 삭제되고 캐시된 노래 폴더가 비워져요. 다음에 재생할 때 다시 스트리밍돼요.</string>
-    <string name="import_spotify">Spotify 가져오기</string>
-    <string name="import_spotify_subtitle">플레이리스트 링크에서</string>
     <string name="spotify_import_title">Spotify 플레이리스트 가져오기</string>
     <string name="spotify_import_description">공개 플레이리스트 링크를 붙여넣으세요. 노래는 YouTube Music에서 찾아 연결해요.</string>
     <string name="spotify_import_description_local">공개 플레이리스트 링크를 붙여넣으세요. 노래는 YouTube Music에서 찾아 연결하고 이 기기에 저장해요.</string>
@@ -1148,6 +1165,7 @@
     <string name="spotify_import_local_fallback">YouTube Music에 만들지 못해 %1$s을(를) 이 기기에 대신 저장했어요.</string>
     <string name="spotify_import_done">%1$s을(를) 가져왔어요</string>
     <string name="spotify_import_unmatched">노래 %1$d곡을 YouTube Music에서 찾지 못했어요</string>
+    <string name="spotify_import_partial">처음 %1$d곡만 읽었고 나머지는 불러오지 못했어요. Spotify에 로그인한 뒤 다시 시도해 보세요.</string>
     <string name="local_playlist_subtitle">%1$d곡 · 이 기기</string>
     <string name="folders">폴더</string>
     <string name="folder">폴더</string>

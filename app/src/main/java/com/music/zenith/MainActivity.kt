@@ -170,6 +170,7 @@ import com.music.zenith.ui.navigation.AppDestination
 import com.music.zenith.ui.components.CoverFlightHost
 import com.music.zenith.ui.components.CoverFlightLayer
 import com.music.zenith.ui.components.LocalCoverVisibilityScope
+import com.music.zenith.ui.components.LocalPageRevisit
 import com.music.zenith.ui.navigation.AppRoute
 import com.music.zenith.ui.screens.EqualizerPresetPage
 import com.music.zenith.ui.screens.SettingsChoiceKind
@@ -178,6 +179,9 @@ import com.music.zenith.ui.components.SpotifyImportAlert
 import com.music.zenith.ui.screens.AccountAndScrobblingScreen
 import com.music.zenith.ui.screens.DiscordDialog
 import com.music.zenith.ui.screens.DiscordDialogHost
+import com.music.zenith.ui.screens.AiTranslateDialog
+import com.music.zenith.ui.screens.AiTranslateDialogHost
+import com.music.zenith.ui.screens.AiTranslateScreen
 import com.music.zenith.ui.screens.DiscordScreen
 import com.music.zenith.ui.screens.EqualizerScreen
 import com.music.zenith.ui.screens.HistoryScreen
@@ -257,6 +261,7 @@ import com.music.zenith.playback.setQueueDragActive
 import com.music.zenith.ui.MainViewModel
 import com.music.zenith.ui.SearchSource
 import com.music.zenith.ui.components.BottomFadeScrim
+import com.music.zenith.ui.components.PageChromeTint
 import com.music.zenith.ui.components.TopFadeBlur
 import com.music.zenith.ui.components.FloatingBarsTapGuard
 import com.music.zenith.ui.components.BottomTab
@@ -514,11 +519,12 @@ class MainActivity : AppCompatActivity() {
                     LocalMostPlayedArt provides { covers, motion, modifier ->
                         MostPlayedArt(covers, motion, modifier)
                     },
-                    LocalMixCoverBackground provides { colors, motion, modifier ->
+                    LocalMixCoverBackground provides { colors, motion, seed, modifier ->
                         OrganicFluidBackground(
                             modifier = modifier,
                             colors = colors,
                             animationSpeed = if (motion) 2.2f else 0f,
+                            seed = seed,
                         )
                     },
                     LocalAppBackdrop provides appBackdrop,
@@ -891,6 +897,7 @@ private fun ZenithApp(
     var showDiscordLogin by remember { mutableStateOf(false) }
     var showSpotifyLogin by remember { mutableStateOf(false) }
     var discordDialog by remember { mutableStateOf<DiscordDialog?>(null) }
+    var aiTranslateDialog by remember { mutableStateOf<AiTranslateDialog?>(null) }
     var songActions by remember { mutableStateOf<Song?>(null) }
     // Song Info hidup di luar menu supaya menu bisa menutup di belakangnya.
     var songInfoTarget by remember { mutableStateOf<Song?>(null) }
@@ -1809,73 +1816,28 @@ private fun ZenithApp(
     }
 
     /**
-     * Resolve and apply the video version without replacing the audio row
-     * up front. This is the inverse of switchToMusicOnly.
+     * Shows the video's picture over the song already playing, instead of
+     * swapping the queue row for the video's own stream: the catalogue audio
+     * stays (its quality, synced lyrics, queue place and Automix) and nothing
+     * is re-resolved, re-buffered or re-aligned. See [MusicVideoEngine.showPictureOver].
      */
-    suspend fun switchToVideo(song: Song, pauseWhileResolving: Boolean) {
+    suspend fun switchToPicture(song: Song) {
         val c = controller ?: return
-        val index = c.currentMediaItemIndex
-        if (index !in 0 until c.mediaItemCount ||
-            c.currentMediaItem?.mediaId != song.videoId ||
-            switchingAudioVersion
-        ) return
-
-        val resumeAfterResolution = pauseWhileResolving && c.playWhenReady
-        switchingAudioVersion = true
-        // Mirrors the music-only path: the bar lights up for the resolve and
-        // the service keeps it lit through the measure-and-cut, and the row
-        // stays on the audio version until that swap actually commits — see
-        // [alignmentPending] at the toggle.
-        val holdUntilAligned = AppSettings.smartVersionAlignment.value
-        if (holdUntilAligned) AppSettings.versionAlignmentInProgress.value = true
-        if (pauseWhileResolving) c.pause()
-        try {
-            TrackLog.d("Player", "video switch requested for '${song.title}'", song.videoId)
-            val video = runCatching { YtMusicRepository.resolveVideo(song) }.getOrNull()
-            val stillCurrent = c.currentMediaItemIndex == index &&
-                c.currentMediaItem?.mediaId == song.videoId
-
-            if (video == null || video.videoId == song.videoId) {
-                TrackLog.w("Player", "video switch found no distinct video", song.videoId)
-                if (song.videoId !in missingVersions) missingVersions += song.videoId
-                if (stillCurrent) showQueueNotice(versionContext.getString(R.string.no_video_version))
-                if (stillCurrent && resumeAfterResolution) c.play()
-                return
-            }
-            if (!stillCurrent) {
-                TrackLog.d("Player", "video switch discarded; listener changed track", song.videoId)
-                return
-            }
-
-            convertedFromAudio = song
-            convertedVideoId = video.videoId
-            TrackLog.d("Player", "video switch applying '${video.title}' (${video.videoId})", song.videoId)
-            val target = video.copy(
-                queueTier = song.queueTier,
-                queueEntryId = song.queueEntryId,
-                radioName = song.radioName,
-                playbackSource = song.playbackSource,
-                playbackSourceType = song.playbackSourceType,
-                playbackSourceId = song.playbackSourceId,
-            )
-            // Not while an alignment is still owed: claiming the video here
-            // would show a version the player is not playing yet, and would
-            // make the switch look finished before it had begun.
-            if (!holdUntilAligned ||
-                VersionAudioAligner.getCachedOffsetMs(song.videoId, target.videoId) != null ||
-                YtMusicRepository.versionTimeMap(song.videoId, target.videoId) != null
-            ) {
-                optimisticVersionSong = target
-            }
-            // Released before the handover for the same reason as the
-            // music-only path above: the service owns the flag from here, and
-            // the finally only exists for the paths that never send.
-            if (holdUntilAligned) AppSettings.versionAlignmentInProgress.value = false
-            c.swapToVersion(target)
-        } finally {
-            if (holdUntilAligned) AppSettings.versionAlignmentInProgress.value = false
-            switchingAudioVersion = false
+        if (c.currentMediaItem?.mediaId != song.videoId || song.isVideo) return
+        // A manual switch to the video version always shows the picture, even
+        // with "Cover instead of video" on: that setting only covers videos
+        // that start on their own.
+        val video = runCatching { YtMusicRepository.resolveVideo(song) }.getOrNull()
+        val stillCurrent = c.currentMediaItem?.mediaId == song.videoId
+        if (video == null || video.videoId == song.videoId) {
+            TrackLog.w("Player", "video picture found no distinct video", song.videoId)
+            if (song.videoId !in missingVersions) missingVersions += song.videoId
+            if (stillCurrent) showQueueNotice(versionContext.getString(R.string.no_video_version))
+            return
         }
+        if (!stillCurrent) return
+        TrackLog.d("Player", "video picture over audio: '${video.title}' (${video.videoId})", song.videoId)
+        MusicVideoEngine.showPictureOver(song.videoId, video.videoId)
     }
 
     fun playFrom(
@@ -3240,6 +3202,7 @@ private fun ZenithApp(
         BackHandler(enabled = showListenBrainzLogin) { showListenBrainzLogin = false }
         BackHandler(enabled = showLastfmLogin) { showLastfmLogin = false }
         BackHandler(enabled = discordDialog != null) { discordDialog = null }
+        BackHandler(enabled = aiTranslateDialog != null) { aiTranslateDialog = null }
         BackHandler(enabled = editingSource != null) { editingSource = null }
         BackHandler(enabled = editingPartyServer) { editingPartyServer = false }
         BackHandler(enabled = editingSignatureApi) { editingSignatureApi = false }
@@ -3520,6 +3483,12 @@ private fun ZenithApp(
                                 onOpenTokenSetup = { showSpotifyCanvasAuth = true },
                                 contentPadding = listPadding,
                             )
+                        } else if (pageRoute == AppRoute.AiTranslate) {
+                            AiTranslateScreen(
+                                onOpenDialog = { aiTranslateDialog = it },
+                                onOpenLanguage = { showTranslationLanguage = true },
+                                contentPadding = listPadding,
+                            )
                         } else if (pageRoute == AppRoute.Discord) {
                             DiscordScreen(
                                 song = player.song,
@@ -3623,7 +3592,7 @@ private fun ZenithApp(
                                     navigator.push(AppRoute.Replay)
                                 },
                                 onLyricsSources = { showLyricsSources = true },
-                                onTranslationLanguage = { showTranslationLanguage = true },
+                                onAiTranslate = { navigator.push(AppRoute.AiTranslate) },
                                 onSources = { navigator.push(AppRoute.Sources) },
                                 onListenTogether = { navigator.push(AppRoute.ListenTogether) },
                                 onSpotifyCanvasAuth = { showSpotifyCanvasAuth = true },
@@ -4328,9 +4297,13 @@ private fun ZenithApp(
                     // the background, or this page on its way out: each frame of
                     // them redraws the page under the glass, for nobody.
                     val barsMotion = artworkMotion && transition.targetState == EnterExitState.Visible
+                    // Dibaca sebelum key dicatat di bawah: sudah tercatat berarti
+                    // halaman ini masih di stack dan sedang didatangi kembali.
+                    val revisit = remember(key) { key in pageKeysSeen }
                     CompositionLocalProvider(
                         LocalPlayingBarsMotion provides barsMotion,
                         LocalCoverVisibilityScope provides this@AnimatedContent,
+                        LocalPageRevisit provides revisit,
                     ) {
                         if (destination is AppDestination.Tab) {
                             pageContent()
@@ -4356,7 +4329,7 @@ private fun ZenithApp(
                         detail.type == BrowseType.ARTIST) &&
                     !isLocalDetail
                 val chromePageColor = if (isDetailVisible) {
-                    detailPalette.background
+                    detail?.let { PageChromeTint.of(it.browseId) } ?: detailPalette.background
                 } else {
                     MaterialTheme.colorScheme.background
                 }
@@ -4470,6 +4443,7 @@ private fun ZenithApp(
                         AppRoute.Spotify -> stringResource(R.string.spotify)
                         AppRoute.Downloads -> stringResource(R.string.downloads)
                         AppRoute.Discord -> "Discord"
+                        AppRoute.AiTranslate -> stringResource(R.string.translation_language)
                         AppRoute.History -> stringResource(R.string.history)
                         is AppRoute.LibraryShowAll -> route.shelf.title
                         is AppRoute.ArtistShelf -> route.shelf.title
@@ -4511,6 +4485,7 @@ private fun ZenithApp(
                                 com.music.zenith.ui.screens.settingsChoiceBarTitle(route.choice)
                             AppRoute.AccountScrobbling -> stringResource(R.string.bar_title_account)
                             AppRoute.Discord -> stringResource(R.string.discord)
+                            AppRoute.AiTranslate -> stringResource(R.string.translation_language)
                             AppRoute.Equalizer -> stringResource(R.string.equalizer)
                             AppRoute.EqualizerPresets -> stringResource(R.string.equalizer_preset)
                             AppRoute.ListenTogether -> stringResource(R.string.listen_together)
@@ -4735,6 +4710,35 @@ private fun ZenithApp(
                                         tint = MaterialTheme.colorScheme.onSurface,
                                     )
                                 }
+                                }
+                                // Share sits left of the ••• while the pill is at rest, in
+                                // the same pill. Tapping ••• unfolds the bar, and Share folds
+                                // away with it: the overflow it opens already carries Share.
+                                val shareableRelease = isReleaseDetail &&
+                                    (detail.type == BrowseType.ALBUM || detail.type == BrowseType.PLAYLIST) &&
+                                    !detail.browseId.startsWith("local:") &&
+                                    !detail.browseId.startsWith(SPOTIFY_PAGE_PREFIX)
+                                ActionReveal(visible = !actionsOpen && shareableRelease) {
+                                    IconButton(
+                                        onClick = {
+                                            val url = if (detail.type == BrowseType.PLAYLIST) {
+                                                "https://music.youtube.com/playlist?list=${detail.browseId.removePrefix("VL")}"
+                                            } else {
+                                                "https://music.youtube.com/browse/${detail.browseId}"
+                                            }
+                                            val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                                                type = "text/plain"
+                                                putExtra(Intent.EXTRA_TEXT, url)
+                                            }
+                                            context.startActivity(Intent.createChooser(sendIntent, detail.title))
+                                        },
+                                    ) {
+                                        Icon(
+                                            SfIcons.Share,
+                                            contentDescription = stringResource(R.string.share),
+                                            tint = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                    }
                                 }
                                 // The same ••• is both the unfold button at rest and the
                                 // overflow once open: the bar grows to its left, so it
@@ -5331,7 +5335,8 @@ private fun ZenithApp(
                 AppSettings.smartVersionAlignment.value &&
                     VersionAudioAligner.getCachedOffsetMs(song.videoId, targetId) == null &&
                     YtMusicRepository.versionTimeMap(song.videoId, targetId) == null
-            val menuIsAudioVersion = if (optimisticVersionSong != null) {
+            val pictureCompanions by MusicVideoEngine.companions.collectAsStateWithLifecycle()
+            val menuIsAudioVersion = song.videoId !in pictureCompanions && if (optimisticVersionSong != null) {
                 !optimisticVersionSong!!.isVideo
             } else {
                 !song.isVideo && convertedVideoId != song.videoId
@@ -5356,6 +5361,8 @@ private fun ZenithApp(
                     val originalAudio = convertedFromAudio
                     when {
                         c == null -> Unit
+                        song.videoId in MusicVideoEngine.companions.value ->
+                            MusicVideoEngine.hidePictureOver(song.videoId)
                         original != null && (
                             convertedAudioId == song.videoId ||
                                 convertedAudioId == versionEffectiveSong.videoId ||
@@ -5396,21 +5403,7 @@ private fun ZenithApp(
                             scope.launch { switchToMusicOnly(song, pauseWhileResolving = false) }
                         }
                         else -> {
-                            val cached = YtMusicRepository.cachedVideoVersion(song.videoId)
-                                ?: YtMusicRepository.cachedVideoVersion(versionEffectiveSong.videoId)
-                            if (cached != null && cached.videoId != song.videoId &&
-                                !versionAlignmentPending(cached.videoId)
-                            ) {
-                                optimisticVersionSong = cached.copy(
-                                    queueTier = song.queueTier,
-                                    queueEntryId = song.queueEntryId,
-                                    radioName = song.radioName,
-                                    playbackSource = song.playbackSource,
-                                    playbackSourceType = song.playbackSourceType,
-                                    playbackSourceId = song.playbackSourceId,
-                                )
-                            }
-                            scope.launch { switchToVideo(song, pauseWhileResolving = false) }
+                            scope.launch { switchToPicture(song) }
                         }
                     }
                 }
@@ -6702,6 +6695,9 @@ private fun ZenithApp(
             FrostedSortMenu(
                 hazeState = hazeState,
                 selected = songSort,
+                // Neither is worth a row where every track shares the value.
+                showArtist = detail?.type != BrowseType.ARTIST && detail?.type != BrowseType.ALBUM,
+                showAlbum = detail?.type != BrowseType.ALBUM,
                 onSelect = { option ->
                     detail?.browseId?.let { AppSettings.setDetailSongSort(it, option) }
                     songSortMenuOpen = false
@@ -7087,6 +7083,14 @@ private fun ZenithApp(
             )
         }
 
+        aiTranslateDialog?.let { which ->
+            AiTranslateDialogHost(
+                which = which,
+                hazeState = hazeState,
+                onDismiss = { aiTranslateDialog = null },
+            )
+        }
+
         discordDialog?.let { which ->
             DiscordDialogHost(
                 which = which,
@@ -7270,6 +7274,8 @@ private fun ActionReveal(visible: Boolean, bounce: Boolean = false, content: @Co
 private fun FrostedSortMenu(
     hazeState: HazeState,
     selected: SongSort,
+    showArtist: Boolean = true,
+    showAlbum: Boolean = true,
     onSelect: (SongSort) -> Unit,
     onFlipDateDirection: () -> Unit,
     onDismiss: () -> Unit,
@@ -7312,6 +7318,7 @@ private fun FrostedSortMenu(
         }
         SongSort.entries
             .filter { it != SongSort.DATE_ADDED_ASC && it != SongSort.DATE_ADDED_DESC }
+            .filter { (it != SongSort.ARTIST_ASC || showArtist) && (it != SongSort.ALBUM_ASC || showAlbum) }
             .forEach { option ->
                 FrostedMenuRow(
                     label = option.localizedLabel(),
@@ -7485,6 +7492,8 @@ private fun SongSort.localizedLabel(): String = when (this) {
     SongSort.DEFAULT -> stringResource(R.string.sort_default)
     SongSort.TITLE_ASC -> stringResource(R.string.sort_title_ascending)
     SongSort.TITLE_DESC -> stringResource(R.string.sort_title_descending)
+    SongSort.ARTIST_ASC -> stringResource(R.string.sort_artist_ascending)
+    SongSort.ALBUM_ASC -> stringResource(R.string.sort_album_ascending)
     SongSort.DATE_ADDED_ASC -> stringResource(R.string.sort_date_added_oldest)
     SongSort.DATE_ADDED_DESC -> stringResource(R.string.sort_date_added)
 }

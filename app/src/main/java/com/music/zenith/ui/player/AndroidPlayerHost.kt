@@ -86,6 +86,7 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
         override val coverMixOnlyEffects get() = AppSettings.coverMixOnlyEffects
         override val reduceDynamicBlur get() = AppSettings.reduceDynamicBlur
         override val canvasLiveBlurPanels get() = AppSettings.canvasLiveBlurPanels
+        override val canvasPanelDefaultBackdrop get() = AppSettings.canvasPanelDefaultBackdrop
         override val dolbyAtmosActive: StateFlow<Boolean> =
             combine(AppSettings.dolbyAtmos, BitPerfectOutput.ready) { enabled, bitPerfect ->
                 DeviceCodecs.playsDolbyAtmos && enabled && !bitPerfect
@@ -118,6 +119,8 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
 
     override fun cachedCanvasOnDisk(song: Song): CanvasArtwork? = CanvasRepository.cachedOnDisk(song)
 
+    override fun forgetCanvas(song: Song) = CanvasRepository.forget(song)
+
     override suspend fun canvasFor(song: Song): CanvasArtwork? = CanvasRepository.canvasFor(song)
 
     @Composable
@@ -134,6 +137,8 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
     override val musicVideoAspect: StateFlow<Float> get() = MusicVideoEngine.aspect
 
     override val musicVideoQuality: StateFlow<MusicVideoQualityUi> get() = MusicVideoEngine.quality
+
+    override val musicVideoCompanions: StateFlow<Map<String, String>> get() = MusicVideoEngine.companions
 
     override fun setMusicVideoQuality(height: Int?) = MusicVideoEngine.setQuality(height)
 

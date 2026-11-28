@@ -721,7 +721,7 @@ private fun QueueModeButton(
                     imageVector = icon,
                     contentDescription = null,
                     tint = tint,
-                    modifier = Modifier.size(21.dp),
+                    modifier = Modifier.size(25.dp),
                 )
                 if (label != null) {
                     Spacer(Modifier.width(4.dp))
