@@ -1344,6 +1344,8 @@ private fun ReleaseHeader(
             animationSpec = tween(260),
             label = "albumPlayColor",
         )
+        // Ikon tombol samping mengikuti warna logo; null berarti warna bawaan.
+        val sideTint = playColor.takeIf { logoColor != null && titleLogo != null }
         Box(contentAlignment = Alignment.Center) {
             if (titleLogo != null) {
                 AlbumTitleLogo(
@@ -1461,6 +1463,7 @@ private fun ReleaseHeader(
                             onClick = onShuffle,
                             haptic = Haptic.Resume,
                             size = RELEASE_SIDE_BUTTON,
+                            tint = sideTint,
                         )
                         ActionPill(
                             icon = ZenithIcons.Play,
@@ -1475,6 +1478,7 @@ private fun ReleaseHeader(
                             icon = ZenithIcons.Plus,
                             contentDescription = stringResource(R.string.playlist_add_songs),
                             onClick = onAddSongs,
+                            tint = sideTint,
                             size = RELEASE_SIDE_BUTTON,
                         )
                         return@Row
@@ -1518,6 +1522,7 @@ private fun ReleaseHeader(
                     onClick = onShuffle,
                     haptic = Haptic.Resume,
                     size = RELEASE_SIDE_BUTTON,
+                    tint = sideTint,
                 )
                 ActionPill(
                     icon = ZenithIcons.Play,
@@ -1541,6 +1546,7 @@ private fun ReleaseHeader(
                         onClick = { onToggleLibrary?.invoke() },
                         haptic = if (library.saved) Haptic.ToggleOff else Haptic.ToggleOn,
                         size = RELEASE_SIDE_BUTTON,
+                        tint = sideTint,
                     )
                 }
             }
@@ -2245,6 +2251,7 @@ private fun ActionRow(
             onClick = onShuffle,
             haptic = Haptic.Resume,
             size = ARTIST_SIDE_BUTTON,
+            tint = playColor,
         )
 
         PlayCircle(
@@ -2264,6 +2271,7 @@ private fun ActionRow(
                 haptic = if (subscription.subscribed) Haptic.ToggleOff else Haptic.ToggleOn,
                 size = ARTIST_SIDE_BUTTON,
                 iconScale = 0.56f,
+                tint = playColor,
             )
         } else {
             CircleIconButton(
@@ -2273,6 +2281,7 @@ private fun ActionRow(
                 size = ARTIST_SIDE_BUTTON,
                 enabled = false,
                 iconScale = 0.56f,
+                tint = playColor,
             )
         }
     }
@@ -2421,6 +2430,8 @@ private fun CircleIconButton(
     enabled: Boolean = true,
     /** Glyph size as a fraction of the button; the star needs more than shuffle. */
     iconScale: Float = 0.44f,
+    /** Warna ikon; null atau terlalu gelap memakai warna bawaan. */
+    tint: Color? = null,
 ) {
     val haptics = rememberHaptics()
     Box(
@@ -2443,7 +2454,7 @@ private fun CircleIconButton(
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            tint = MaterialTheme.colorScheme.onSurface,
+            tint = tint?.takeIf { it.luminance() >= 0.08f } ?: MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.size(size * iconScale),
         )
     }
