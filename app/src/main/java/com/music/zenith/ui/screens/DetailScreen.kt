@@ -986,6 +986,11 @@ fun DetailScreen(
                             isPlaying = isCurrent && isPlaying,
                             activeTint = palette.accent,
                             searchPlayingStyle = true,
+                            swipeTint = if (isArtist) {
+                                appleArt?.keyColor?.let { Color(it) }
+                            } else {
+                                albumLogo?.takeIf { isCatalogAlbumPage }?.let { LogoColors[it.imageUrl] }
+                            },
                         )
                         if (position < matches.lastIndex) {
                             HorizontalDivider(
@@ -1890,7 +1895,7 @@ private fun ArtistHeader(
 }
 
 /** Title logo colours already read, so a revisited album starts tinted. */
-private val LogoColors = HashMap<String, Color>()
+private val LogoColors = androidx.compose.runtime.mutableStateMapOf<String, Color>()
 
 /**
  * The dominant ink of a logo, favouring saturated colours over its white or
