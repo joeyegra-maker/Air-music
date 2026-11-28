@@ -31,9 +31,11 @@ import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.LocalOffer
 import androidx.compose.material.icons.rounded.NewReleases
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -63,7 +65,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -223,16 +224,38 @@ internal fun AboutContent(version: String) {
         )
     }
 
+    SectionLabel("Credits")
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = GROUP_INSET)
+            .clip(TileShape)
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        SettingsRow(
+            icon = Icons.Rounded.Favorite,
+            title = "Forked from BitChord",
+            subtitle = "Zenith is built on BitChord, the open-source music app by kushagrasinghx and its contributors.",
+            onClick = { context.openAboutLink("https://github.com/kushagrasinghx/BitChord") },
+        )
+        HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
+        SettingsRow(
+            icon = Icons.Rounded.Person,
+            title = "kushagrasinghx",
+            subtitle = "Original developer of BitChord. View profile on GitHub.",
+            onClick = { context.openAboutLink("https://github.com/kushagrasinghx") },
+        )
+    }
+
     Text(
-        text = "Forked from BitChord",
+        text = "Zenith wouldn't exist without BitChord. Thank you, kushagrasinghx and every contributor, for the foundation.",
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        textDecoration = TextDecoration.Underline,
         textAlign = TextAlign.Center,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { context.openAboutLink("https://github.com/kushagrasinghx/BitChord") }
-            .padding(top = 22.dp, bottom = 28.dp),
+            .padding(horizontal = GROUP_INSET + 8.dp)
+            .padding(top = 16.dp, bottom = 28.dp),
     )
 }
 
