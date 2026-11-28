@@ -21,6 +21,7 @@ import androidx.compose.foundation.clickable
 
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import com.music.zenith.ui.components.GLASS_JELLY_PRESS_WIDE
+import com.music.zenith.ui.components.PageChromeTint
 import com.music.zenith.ui.components.glassJelly
 import com.music.zenith.ui.components.liquidGlassRim
 import com.music.zenith.ui.components.continuous
@@ -75,6 +76,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -522,6 +524,10 @@ fun DetailScreen(
         keyColors = appleArt?.keyColors() ?: page.mix?.let { mixKeyColors(it) }
             ?: likedTint?.let { com.music.zenith.ui.theme.ArtworkKeyColors(background = it[1], accent = it[2]) },
     )
+    // Fade atas/bawah di level app memakai warna yang sama dengan halaman ini.
+    if (isLikedPage) {
+        SideEffect { PageChromeTint.set(page.browseId, palette.background) }
+    }
 
     // Narrowing the running order in place — the release equivalent of the
     // filter box on the Local Music tab, and the one thing a long track list

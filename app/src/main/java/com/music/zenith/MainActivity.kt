@@ -261,6 +261,7 @@ import com.music.zenith.playback.setQueueDragActive
 import com.music.zenith.ui.MainViewModel
 import com.music.zenith.ui.SearchSource
 import com.music.zenith.ui.components.BottomFadeScrim
+import com.music.zenith.ui.components.PageChromeTint
 import com.music.zenith.ui.components.TopFadeBlur
 import com.music.zenith.ui.components.FloatingBarsTapGuard
 import com.music.zenith.ui.components.BottomTab
@@ -4398,7 +4399,7 @@ private fun ZenithApp(
                         detail.type == BrowseType.ARTIST) &&
                     !isLocalDetail
                 val chromePageColor = if (isDetailVisible) {
-                    detailPalette.background
+                    detail?.let { PageChromeTint.of(it.browseId) } ?: detailPalette.background
                 } else {
                     MaterialTheme.colorScheme.background
                 }
