@@ -178,7 +178,6 @@
     <string name="recent_search_edit">Edit “%1$s”</string>
     <string name="recent_search_remove">Hapus “%1$s” dari pencarian terbaru</string>
     <string name="recent_searches">Pencarian terbaru</string>
-    <string name="replay_subtitle">Lagu, artis, album, dan genre teratas Anda</string>
     <string name="retry">Coba lagi</string>
     <string name="saved_to_youtube_music">Disimpan ke YouTube Music</string>
     <string name="search">Cari</string>
@@ -220,8 +219,6 @@
     <string name="sign_in">Masuk</string>
     <string name="sign_in_youtube_music">Masuk ke YouTube Music</string>
     <string name="subscriptions">Langganan</string>
-    <string name="your_replay">Replay Anda</string>
-    <string name="default_replay_holder">Pendengar Zenith</string>
     <string name="import_spotify">Impor dari Spotify</string>
     <string name="import_spotify_subtitle">Dari tautan playlist</string>
     <string name="search_library_empty">Cari lagu di folder Musik Lokal Anda.</string>

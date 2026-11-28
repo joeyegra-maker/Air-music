@@ -181,7 +181,6 @@
     <string name="recent_search_edit">Edit “%1$s”</string>
     <string name="recent_search_remove">Remove “%1$s” from recent searches</string>
     <string name="recent_searches">Recent searches</string>
-    <string name="replay_subtitle">Your top songs, artists, albums and genres</string>
     <string name="retry">Retry</string>
     <string name="saved_to_youtube_music">Saved to YouTube Music</string>
     <string name="search">Search</string>
@@ -213,7 +212,6 @@
     <string name="search_top_result">Top result</string>
     <string name="shelf_quick_picks">Quick picks</string>
     <string name="shelf_speed_dial">Speed dial</string>
-    <string name="shuffle">Shuffle</string>
     <string name="shelf_recents">Recents</string>
     <string name="shelf_recommended_music_videos">Recommended music videos</string>
     <string name="shelf_shorts">Shorts</string>
@@ -230,8 +228,6 @@
     <string name="sign_in">Sign in</string>
     <string name="sign_in_youtube_music">Sign in to YouTube Music</string>
     <string name="subscriptions">Subscriptions</string>
-    <string name="your_replay">Your Replay</string>
-    <string name="default_replay_holder">Zenith listener</string>
     <string name="import_spotify">Import Spotify</string>
     <string name="import_spotify_subtitle">From a playlist link</string>
     <string name="sign_in_with_google">Sign in with Google</string>

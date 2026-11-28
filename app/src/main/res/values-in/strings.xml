@@ -31,7 +31,6 @@
     <string name="on_device">Di Perangkat</string>
     <string name="playlists">Playlist</string>
     <string name="new_playlist">Playlist baru</string>
-    <string name="saved_to_youtube_music">Disimpan ke YouTube Music</string>
     <string name="sign_in">Masuk</string>
     <string name="sign_out">Keluar</string>
     <string name="signed_in">Sudah masuk</string>
@@ -54,12 +53,7 @@
     <string name="artists">Artis</string>
     <string name="albums">Album</string>
 
-    <string name="search_empty">Cari jutaan lagu di YouTube Music.</string>
-    <string name="recent_searches">Pencarian terbaru</string>
     <string name="clear">Hapus</string>
-    <string name="search_hint">Artis, Lagu, Lirik, dan Lainnya</string>
-    <string name="recent_search_edit">Edit “%1$s”</string>
-    <string name="recent_search_remove">Hapus “%1$s” dari pencarian terbaru</string>
     <string name="storage_required_save">Akses penyimpanan diperlukan untuk menyimpan lagu</string>
     <string name="storage_required_read">Izin penyimpanan diperlukan untuk membaca file audio lokal</string>
 
@@ -68,8 +62,6 @@
         <item quantity="other">Mengunduh %1$d lagu</item>
     </plurals>
     <string name="source">Sumber</string>
-
-    <string name="overridden">Ditimpa</string>
 
     <string name="remove_source">Hapus sumber ini</string>
     <string name="test">Uji</string>
@@ -144,8 +136,6 @@
     <string name="spatial_audio">Audio spasial</string>
     <string name="spatial_audio_subtitle">Melebarkan trek stereo untuk pengalaman yang lebih imersif</string>
     <string name="spatial_audio_atmos_subtitle">Dijeda untuk lagu ini — Dolby Atmos sudah spasial</string>
-    <string name="spatial_audio_prefer_off">Pilih Audio Spasial Mati</string>
-    <string name="spatial_audio_prefer_on">Pilih Audio Spasial Nyala</string>
     <string name="spatial_audio_this_song_only">Hanya lagu ini</string>
     <string name="spatial_audio_state_on">Nyala</string>
     <string name="spatial_audio_state_off">Mati</string>
@@ -211,12 +201,7 @@
     <string name="app_language_description">Pilih bahasa yang digunakan Zenith.</string>
     <string name="english">Inggris</string>
 
-    <string name="polish">Polandia</string>
-
     <string name="indonesian">Indonesia</string>
-    <string name="hindi">Hindi</string>
-    <string name="japanese">Jepang</string>
-
     <string name="korean">Korea</string>
     <string name="show_all">Lihat semua</string>
 
@@ -314,7 +299,6 @@
     <string name="high_performance_mode">Mode performa tinggi</string>
     <string name="high_performance_subtitle">Menggunakan animasi dan blur penuh, serta meminta refresh rate layar yang lebih tinggi</string>
     <string name="high_performance_active">%1$d Hz diminta. Android dapat menurunkannya saat diperlukan.</string>
-    <string name="beta">Beta</string>
     <string name="refresh_rate">Kecepatan refresh</string>
     <string name="high_performance_before_enabling">Sebelum mengaktifkan</string>
     <string name="high_performance_battery_warning">Atur dulu penggunaan baterai Zenith ke Tidak Dibatasi. Refresh rate yang lebih tinggi menggunakan lebih banyak baterai, CPU, dan GPU, serta dapat membuat perangkat Anda menjadi hangat.</string>
@@ -386,7 +370,6 @@
     <string name="wifi_only_download_refusal">Unduhan dibatasi hanya lewat Wi-Fi. Nonaktifkan itu di Pengaturan untuk menggunakan data seluler.</string>
     <string name="pinned_playlist_limit">Hanya %1$d playlist yang dapat disematkan</string>
     <string name="downloaded_playlist">Playlist yang diunduh</string>
-    <string name="library_sign_in_description">Masuk ke akun Google Anda untuk melihat lagu yang disukai, playlist, dan riwayat YouTube Music Anda.</string>
     <string name="downloads_progress">Unduhan · %1$d%%</string>
     <string name="downloads_finished">Unduhan · selesai</string>
     <string name="downloading_progress">Mengunduh · %1$d%%</string>
@@ -532,8 +515,6 @@
     <string name="spotify_canvas_setup_steps">1. Masuk di open.spotify.com melalui browser.\n2. Buka Developer Tools, lalu Application dan Cookies.\n3. Salin nilai cookie sp_dc.\n4. Tempel di bawah ini.</string>
     <string name="spotify_canvas_auto_hide">Sembunyikan kontrol otomatis</string>
     <string name="spotify_canvas_auto_hide_subtitle">Menciutkan setengah pemutar setelah 5 detik saat Spotify Canvas diputar</string>
-    <string name="prioritize_spotify_canvas">Prioritaskan Spotify Canvas</string>
-    <string name="prioritize_spotify_canvas_subtitle">Coba Spotify sebelum Apple Music dan penyedia sampul animasi lainnya</string>
     <string name="canvas_provider_order">Urutan penyedia canvas</string>
     <string name="canvas_provider_order_subtitle">Dicoba dari atas ke bawah sampai ada yang punya canvas untuk lagu ini</string>
     <string name="status">Status</string>
@@ -634,7 +615,6 @@
     <string name="minutes_short">%1$d mnt</string>
     <string name="not_enough_listening">Belum cukup riwayat mendengarkan</string>
     <string name="not_enough_this_month">Putar beberapa lagu lagi bulan ini untuk membuka Replay Anda.</string>
-    <string name="pinned">Disematkan</string>
     <string name="replay_across"> di seluruh </string>
     <string name="replay_empty_description">Dengarkan sedikit lebih banyak dan Zenith akan mengubah riwayat Anda menjadi Replay.</string>
     <string name="replay_habits_middle"> dari </string>
@@ -717,8 +697,6 @@
     <string name="delete_download">Hapus unduhan</string>
     <string name="delete_playlist_confirmation">Hapus “%1$s”? Ketuk lagi untuk konfirmasi.</string>
     <string name="delete_download_confirmation">Hapus “%1$s” dari perangkat ini? Ketuk lagi untuk konfirmasi.</string>
-    <string name="running">Berjalan</string>
-
     <string name="automix_enabled_subtitle">Mengatur waktu dan memadukan setiap transisi dari trek itu sendiri. Nonaktifkan jika ponsel menjadi panas atau pemutaran tersendat.</string>
     <string name="automix_model_title">Unduh model Automix</string>
     <string name="automix_model_message">Automix membutuhkan dua model analisis kecil (sekitar 30 MB). Diunduh sekali dan disimpan di perangkat ini.</string>
@@ -894,19 +872,7 @@
 
     <string name="brand_account">Akun merek</string>
 
-    <string name="card_plays_format">%1$s diputar</string>
-
-    <string name="card_songs_format">%1$s lagu</string>
-
-    <string name="card_views_format">%1$s tayangan</string>
-
-
-
-
-
-
-
-    <string name="choose_profile">Pilih profil</string>
+    <string name="card_views_format">%1$s tayangan</string>ing>
 
     <string name="convert_to_audio">Konversi ke audio</string>
     <string name="convert_to_video">Ubah ke video</string>
@@ -923,8 +889,6 @@
 
 
 
-
-    <string name="default_youtube_profile">Profil default YouTube Music</string>
 
     <string name="dolby_atmos">Dolby Atmos</string>
 
@@ -956,7 +920,6 @@
 
     <string name="liquid_glass_unavailable">Memerlukan Android 12 atau yang lebih baru</string>
 
-    <string name="listen_as">Dengarkan sebagai</string>
     <string name="edit_profile">Ubah profil</string>
     <string name="profile_display_name">Nama tampilan</string>
     <string name="profile_change_photo">Ganti foto</string>
@@ -967,14 +930,10 @@
 
 
 
-    <string name="manage_accounts">Kelola akun</string>
-
     <string name="output_precision">Presisi output</string>
 
     <string name="personal">Pribadi</string>
 
-
-    <string name="playlist_action">Playlist</string>
 
     <string name="prefer_usb_dac">Pilih DAC USB</string>
     <string name="loudness_normalization">Normalisasi kenyaringan</string>
@@ -990,8 +949,6 @@
 
     <string name="profile_unavailable">Belum ada profil masuk yang tersedia di halaman ini.</string>
 
-    <string name="profiles">Profil</string>
-
     <string name="radio_started">Radio %1$s dimulai</string>
 
     <string name="revert_to_original">Kembalikan ke asli</string>
@@ -1006,79 +963,7 @@
 
 
 
-    <string name="shelf_artists_on_the_rise">Artis pendatang baru</string>
-
-    <string name="shelf_chart">Tangga lagu</string>
-
-    <string name="shelf_charts">Tangga lagu</string>
-
-
-
-    <string name="shelf_concerts">Konser</string>
-
-
-
-    <string name="shelf_featured_playlists_for_you">Playlist pilihan untuk Anda</string>
-
-
-
-
-
-    <string name="shelf_for_you">Untuk Anda</string>
-
-    <string name="shelf_forgotten_favorites">Favorit terlupakan</string>
-
-    <string name="shelf_from_the_community">Dari komunitas</string>
-
-    <string name="shelf_from_your_library">Dari perpustakaan Anda</string>
-
-    <string name="shelf_hits_today">Hits hari ini</string>
-
-    <string name="shelf_listen_again">Dengarkan lagi</string>
-
-    <string name="shelf_mixed_for_you">Campuran untuk Anda</string>
-
-    <string name="shelf_new_albums_singles">Album &amp; single baru</string>
-
-    <string name="shelf_new_releases">Rilisan baru</string>
-
-
-
-    <string name="shelf_quick_picks">Pilihan cepat</string>
-
-    <string name="shelf_recents">Terbaru</string>
-
-    <string name="shelf_recommended_music_videos">Video musik yang direkomendasikan</string>
-
-
-
-
-
-
-
-    <string name="shelf_shorts">Shorts</string>
-
-    <string name="shelf_similar_to">Mirip dengan %1$s</string>
-
-    <string name="shelf_single">Single</string>
-
-
-
-    <string name="shelf_song_item">Lagu</string>
-
-    <string name="shelf_top_music_videos">Video musik teratas</string>
-
-    <string name="shelf_top_tunes_right_now">Lagu populer saat ini</string>
-
-    <string name="shelf_trending">Sedang tren</string>
-
-    <string name="shelf_trending_community_playlists">Playlist komunitas populer</string>
-
-
-
-    <string name="shelf_youtube_charts">Tangga Lagu YouTube</string>
-
-    <string name="sort_date_added_oldest">Tanggal ditambahkan (terlama lebih dulu)</string>
+    <string name="shelf_concerts">Konser</string>u">Playlist pilihan untuk Anda</string>helf_recommended_music_videos">Video musik yang direkomendasikan</string>string>
 
     <string name="sort_date_added_toggle">Tanggal ditambahkan</string>
 
@@ -1097,8 +982,6 @@
     <string name="start_radio">Mulai radio</string>
 
     <string name="subscribe">Langganan</string>
-
-    <string name="subscriptions">Langganan</string>
 
     <string name="switch_account">Ganti akun</string>
 
@@ -1163,16 +1046,10 @@
     <string name="auto_music_only">Audio daripada video</string>
     <string name="auto_music_only_subtitle">Music video otomatis diputar sebagai audio</string>
     <string name="content_feed">Konten &amp; Beranda</string>
-    <string name="hide_home_recents">Sembunyikan terakhir diputar</string>
-
     <string name="hide_home_videos">Sembunyikan video di Beranda</string>
     <string name="hide_home_videos_subtitle">Baris yang hanya berisi video ikut hilang. Pencarian, artis, dan playlist tetap menampilkannya</string>
     <string name="hide_home_branding">Sembunyikan branding Beranda</string>
     <string name="hide_home_branding_subtitle">Hanya menampilkan judul Beranda, tanpa logo</string>
-    <string name="hide_home_top_picks">Sembunyikan Pilihan Teratas</string>
-
-    <string name="hide_home_moods">Sembunyikan Mood</string>
-
     <string name="customize_home">Atur susunan Beranda</string>
     <string name="customize_home_subtitle">Ubah urutan baris dan pilih mana yang tampil</string>
     <string name="home_layout_description">Seret baris lewat gagangnya untuk memindahkan. Hapus centang untuk menyembunyikannya dari Beranda.</string>
@@ -1279,10 +1156,6 @@
 
     <string name="translation_language_subtitle">Mengikuti bahasa aplikasi</string>
 
-    <string name="ai_translate">Terjemahan AI</string>
-
-    <string name="ai_translate_subtitle">Gemini, Groq, dan OpenRouter dengan fallback otomatis</string>
-
     <string name="ai_translate_use">Pakai terjemahan AI</string>
 
     <string name="ai_translate_use_subtitle">Lirik diterjemahkan model AI. Kalau semua provider gagal, terjemahan bawaan yang dipakai.</string>
@@ -1308,8 +1181,6 @@
     <string name="ai_translate_last_used">Terakhir dipakai</string>
 
     <string name="ai_translate_last_used_none">Belum ada</string>
-
-    <string name="ai_provider_header">%1$s · prioritas %2$d</string>
 
     <string name="ai_provider_keys">API key</string>
 
@@ -1468,10 +1339,7 @@
     <string name="song_cache_unlimited_subtitle">Tanpa batas. Audio dalam cache bisa terus bertambah hingga penyimpanan penuh.</string>
     <string name="clear_song_cache_title">Hapus cache lagu?</string>
     <string name="clear_song_cache_warning">Semua lagu dalam cache akan dihapus dan folder lagu dalam cache akan dikosongkan. Lagu akan di-streaming lagi saat diputar berikutnya.</string>
-    <string name="import_spotify">Impor dari Spotify</string>
-    <string name="import_spotify_subtitle">Dari tautan playlist</string>
     <string name="local_playlist_subtitle">%1$d lagu · Di perangkat ini</string>
-    <string name="pinned_playlists">Playlist Tersemat</string>
     <string name="lossless_output_permission_denied">Izin perangkat terdekat nonaktif</string>
     <string name="lossless_output_permission_denied_detail">Ketuk untuk membuka Pengaturan dan mengizinkan perangkat terdekat — tanpa itu codec Bluetooth Anda tidak bisa dibaca</string>
     <string name="recent_album">Album Terbaru</string>

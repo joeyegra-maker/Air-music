@@ -41,7 +41,6 @@
     <string name="on_device">On Device</string>
     <string name="playlists">Playlists</string>
     <string name="new_playlist">New playlist</string>
-    <string name="saved_to_youtube_music">Saved to YouTube Music</string>
     <string name="sign_in">Sign in</string>
     <string name="sign_out">Sign out</string>
     <string name="signed_in">Signed in</string>
@@ -89,14 +88,9 @@
     <string name="artists">Artists</string>
     <string name="albums">Albums</string>
 
-    <string name="search_empty">Search millions of songs on YouTube Music.</string>
-    <string name="recent_searches">Recent searches</string>
     <string name="clear">Clear</string>
-    <string name="search_hint">Artists, Songs, Lyrics and More</string>
     <string name="settings_search_hint">Search settings</string>
     <string name="settings_search_empty">No settings match “%1$s”</string>
-    <string name="recent_search_edit">Edit “%1$s”</string>
-    <string name="recent_search_remove">Remove “%1$s” from recent searches</string>
     <string name="storage_required_save">Storage access is needed to save songs</string>
     <string name="storage_required_read">Storage permission is required to read local audio files</string>
 
@@ -108,8 +102,6 @@
     <string name="source">Sources</string>
     <string name="direct_source_stream">Direct Source Stream</string>
     <string name="direct_source_stream_in_party">Off while you\'re in a Listen Together party</string>
-
-    <string name="overridden">Overridden</string>
 
     <string name="remove_source">Remove this source</string>
     <string name="test">Test</string>
@@ -202,8 +194,6 @@
     <string name="spatial_audio">Spatial audio</string>
     <string name="spatial_audio_subtitle">Widens stereo tracks for a more immersive feel</string>
     <string name="spatial_audio_atmos_subtitle">Paused for this track — Dolby Atmos is already spatial</string>
-    <string name="spatial_audio_prefer_off">Prefer Spatial Audio Off</string>
-    <string name="spatial_audio_prefer_on">Prefer Spatial Audio On</string>
     <string name="spatial_audio_this_song_only">This song only</string>
     <string name="spatial_audio_state_on">On</string>
     <string name="spatial_audio_state_off">Off</string>
@@ -269,12 +259,7 @@
     <string name="app_language_description">Choose the language used by Zenith.</string>
     <string name="english">English</string>
 
-    <string name="polish">Polish</string>
-
     <string name="indonesian">Indonesian</string>
-    <string name="hindi">Hindi</string>
-    <string name="japanese">Japanese</string>
-
     <string name="korean">Korean</string>
     <string name="show_all">Show all</string>
 
@@ -315,16 +300,10 @@
     <string name="auto_music_only">Audio over video</string>
     <string name="auto_music_only_subtitle">Music videos play as audio automatically</string>
     <string name="content_feed">Content &amp; Feed</string>
-    <string name="hide_home_recents">Hide recently played</string>
-
     <string name="hide_home_videos">Hide videos on Home</string>
     <string name="hide_home_videos_subtitle">Rows made only of videos go too. Search, artists and playlists still list them</string>
     <string name="hide_home_branding">Hide Home branding</string>
     <string name="hide_home_branding_subtitle">Shows only the Home title, without the logo</string>
-    <string name="hide_home_top_picks">Hide Top Picks</string>
-
-    <string name="hide_home_moods">Hide Moods</string>
-
     <string name="customize_home">Customize Home</string>
     <string name="customize_home_subtitle">Reorder rows and choose which ones show</string>
     <string name="home_layout_description">Drag a row by its handle to move it. Untick a row to hide it from Home.</string>
@@ -601,7 +580,6 @@
     <string name="high_performance_mode">High performance mode</string>
     <string name="high_performance_subtitle">Uses full animations and blur, and requests a higher display refresh rate</string>
     <string name="high_performance_active">%1$d Hz requested. Android may lower it when needed.</string>
-    <string name="beta">Beta</string>
     <string name="refresh_rate">Refresh rate</string>
     <string name="high_performance_before_enabling">Before enabling</string>
     <string name="high_performance_battery_warning">First set Zenith\'s battery usage to Unrestricted. Higher refresh rates use more battery, CPU and GPU, and may warm your device.</string>
@@ -631,8 +609,6 @@
     <string name="translation_language_description">The language the translate button turns lyrics into.</string>
     <string name="translation_language_app_default">App language</string>
     <string name="translation_language_subtitle">Follows the app language</string>
-    <string name="ai_translate">AI translation</string>
-    <string name="ai_translate_subtitle">Gemini, Groq and OpenRouter with automatic fallback</string>
     <string name="ai_translate_use">Use AI translation</string>
     <string name="ai_translate_use_subtitle">Lyrics are translated by an AI model. If every provider fails, the built-in translation takes over.</string>
     <string name="ai_translate_need_key">Add at least one API key below, otherwise the built-in translation is used.</string>
@@ -646,7 +622,6 @@
     <string name="ai_translate_test_none">No active provider has an API key yet.</string>
     <string name="ai_translate_last_used">Last used</string>
     <string name="ai_translate_last_used_none">Nothing yet</string>
-    <string name="ai_provider_header">%1$s · priority %2$d</string>
     <string name="ai_provider_keys">API keys</string>
     <string name="ai_provider_keys_title">%1$s API keys</string>
     <string name="ai_provider_keys_none">Not set</string>
@@ -752,7 +727,6 @@
     <string name="wifi_only_download_refusal">Downloads are limited to Wi-Fi. Turn that off in Settings to use mobile data.</string>
     <string name="pinned_playlist_limit">Only %1$d playlists can be pinned</string>
     <string name="downloaded_playlist">Downloaded playlist</string>
-    <string name="library_sign_in_description">Sign in to your Google account to see your liked songs, playlists, and YouTube Music history.</string>
     <string name="downloads_progress">Downloads · %1$d%%</string>
     <string name="downloads_finished">Downloads · finished</string>
     <string name="downloading_progress">Downloading · %1$d%%</string>
@@ -932,8 +906,6 @@
     <string name="spotify_canvas_setup_steps">1. Sign in at open.spotify.com in a browser.\n2. Open Developer Tools, then Application and Cookies.\n3. Copy the value of the sp_dc cookie.\n4. Paste it below.</string>
     <string name="spotify_canvas_auto_hide">Auto-hide player controls</string>
     <string name="spotify_canvas_auto_hide_subtitle">Collapse the half-player after 5 seconds while Spotify Canvas is playing</string>
-    <string name="prioritize_spotify_canvas">Prioritize Spotify Canvas</string>
-    <string name="prioritize_spotify_canvas_subtitle">Try Spotify before Apple Music and other animated cover providers</string>
     <string name="canvas_provider_order">Canvas provider order</string>
     <string name="canvas_provider_order_subtitle">Asked from top to bottom until one has a canvas for the song</string>
     <string name="status">Status</string>
@@ -1038,7 +1010,6 @@
     <string name="not_enough_listening">Not enough listening yet</string>
     <string name="not_enough_this_month">Play a few more songs this month to unlock your Replay.</string>
     <string name="not_enough_this_week">Play a few more songs this week to unlock your Replay.</string>
-    <string name="pinned">Pinned</string>
     <string name="replay_across">Across </string>
     <string name="replay_empty_description">Listen a little more and Zenith will turn your history into a Replay.</string>
     <string name="replay_habits_middle"> from </string>
@@ -1119,7 +1090,6 @@
     <string name="smb_disconnect">Disconnect</string>
     <string name="smb_test_failed">Couldn’t reach it: %1$s</string>
     <string name="playlist">playlist</string>
-    <string name="playlist_action">Playlist</string>
     <string name="open">Open</string>
     <string name="open_playlist">Open playlist</string>
     <string name="pin">Pin</string>
@@ -1130,8 +1100,6 @@
     <string name="delete_download">Delete download</string>
     <string name="delete_playlist_confirmation">Delete “%1$s”? Tap again to confirm.</string>
     <string name="delete_download_confirmation">Remove “%1$s” from this device? Tap again to confirm.</string>
-    <string name="running">Running</string>
-
     <string name="automix_enabled_subtitle">Times and blends every transition from the tracks themselves. Turn it off if the phone gets hot or playback stutters.</string>
     <string name="automix_model_title">Download Automix models</string>
     <string name="automix_model_message">Automix needs two small analysis models (about 30 MB). They download once and stay on this device.</string>
@@ -1172,20 +1140,15 @@
     <string name="all_time">All time</string>
     <string name="switch_account">Switch account</string>
     <string name="accounts">Accounts</string>
-    <string name="profiles">Profiles</string>
     <string name="personal">Personal</string>
     <string name="brand_account">Brand account</string>
     <string name="add_account">Add account</string>
-    <string name="manage_accounts">Manage accounts</string>
-
     <string name="selected_account">Selected account</string>
-    <string name="listen_as">Listen as</string>
     <string name="edit_profile">Edit profile</string>
     <string name="profile_display_name">Display name</string>
     <string name="profile_change_photo">Change photo</string>
     <string name="profile_reset">Reset to Google profile</string>
     <string name="profile_local_only_note">Shown only in this app. Your Google account is not changed.</string>
-    <string name="default_youtube_profile">YouTube Music default profile</string>
     <string name="account_profiles_help">A Google account can have Personal and Brand profiles. Each has its own library, likes and history.</string>
     <string name="choose_profile">Choose a profile</string>
     <string name="use_this_profile">Use this profile</string>
@@ -1367,91 +1330,8 @@
 
 
 
-    <string name="shelf_trending_community_playlists">Trending community playlists</string>
-
-    <string name="shelf_featured_playlists_for_you">Featured playlists for you</string>
-
-    <string name="shelf_quick_picks">Quick picks</string>
-
-    <string name="shelf_listen_again">Listen again</string>
-
-    <string name="shelf_mixed_for_you">Mixed for you</string>
-
     <string name="shelf_similar_to">Similar to %1$s</string>
-
-    <string name="shelf_forgotten_favorites">Forgotten favorites</string>
-
-    <string name="shelf_recommended_music_videos">Recommended music videos</string>
-
-    <string name="shelf_from_your_library">From your library</string>
-
-    <string name="shelf_charts">Charts</string>
-
-    <string name="shelf_new_releases">New releases</string>
-
-    <string name="shelf_top_music_videos">Top music videos</string>
-
-    <string name="shelf_for_you">For you</string>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    <string name="shelf_new_albums_singles">New albums &amp; singles</string>
-
-    <string name="shelf_hits_today">Hits today</string>
-
-    <string name="shelf_artists_on_the_rise">Artists on the rise</string>
-
-
-    <string name="shelf_top_tunes_right_now">Top tunes right now</string>
-
-    <string name="shelf_concerts">Concerts</string>
-
-    <string name="shelf_shorts">Shorts</string>
-
-    <string name="shelf_single">Single</string>
-
-    <string name="shelf_chart">Chart</string>
-
-    <string name="shelf_song_item">Song</string>
-
-    <string name="shelf_from_the_community">From the community</string>
-
-    <string name="shelf_youtube_charts">YouTube Charts</string>
-
-    <string name="shelf_trending">Trending</string>
-
-    <string name="shelf_recents">Recents</string>
-
-    <string name="subscriptions">Subscriptions</string>
-
-
-    <string name="card_views_format">%1$s views</string>
-
-    <string name="card_plays_format">%1$s plays</string>
-
-    <string name="card_songs_format">%1$s songs</string>
-
-    <string name="source_needs_lossless_output">Needs a lossless output · use a lossless supported device</string>
+    <string name="shelf_for_you">For you</string>horts">Shorts</string> Charts</string>s output · use a lossless supported device</string>
     <string name="source_needs_lossless_bt_codec">Needs a lossless output · Bluetooth is on %1$s; use a lossless supported device</string>
     <string name="source_needs_lossless_bt_unknown">Needs a lossless output · can’t tell which Bluetooth codec is in use</string>
     <string name="source_downloads_on">Downloads allowed</string>
@@ -1475,8 +1355,6 @@
     <string name="song_cache_unlimited_subtitle">No limit. Cached audio can keep growing until your storage is full.</string>
     <string name="clear_song_cache_title">Clear song cache?</string>
     <string name="clear_song_cache_warning">All cached songs will be deleted and the Cached songs folder will be emptied. They will stream again the next time you play them.</string>
-    <string name="import_spotify">Import Spotify</string>
-    <string name="import_spotify_subtitle">From a playlist link</string>
     <string name="spotify_import_title">Import Spotify playlist</string>
     <string name="spotify_import_description">Paste a public playlist link. Songs are matched on YouTube Music.</string>
     <string name="spotify_import_description_local">Paste a public playlist link. Songs are matched on YouTube Music and saved on this device.</string>
@@ -1492,7 +1370,6 @@
     <string name="spotify_import_unmatched">%1$d songs weren\'t found on YouTube Music</string>
     <string name="spotify_import_partial">Only the first %1$d songs could be read; the rest of the playlist couldn\'t be loaded. Sign in to Spotify and try again to load all of it.</string>
     <string name="local_playlist_subtitle">%1$d songs · On this device</string>
-    <string name="pinned_playlists">Pinned Playlists</string>
     <!-- Local Music's own playlists and folders: the offline player. -->
     <string name="folders">Folders</string>
     <string name="folder">Folder</string>
