@@ -41,6 +41,7 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.verticalDrag
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -1010,6 +1011,16 @@ private fun SlidingPlayerDeck(
             content()
         }
     }
+}
+
+/**
+ * Memecah [NowPlayingScreen] menjadi beberapa method dex. Box dan Column bersifat inline,
+ * sehingga tanpa ini isi player menumpuk dalam satu lambda raksasa yang kehabisan register
+ * dan hasil R8-nya ditolak verifier ART (VerifyError). Jangan dijadikan inline.
+ */
+@Composable
+private fun BoxScope.PlayerBoxSlice(content: @Composable BoxScope.() -> Unit) {
+    content()
 }
 
 /**
@@ -3328,6 +3339,7 @@ fun NowPlayingScreen(
 
                 // Mount once, behind the controls. A known portrait aspect changes the
                 // invisible view to full-player bounds before its first frame is shown.
+                PlayerBoxSlice {
                 if (heroMode && heroHeight > 0.dp) {
                     heroClipMounted?.let { clip ->
                         val stillStart = remember(clip.url) { stillAtMount() }
@@ -3530,6 +3542,7 @@ fun NowPlayingScreen(
                                 .hazeSource(playerHaze),
                         )
                     }
+                }
                 }
 
                 // Live blur on: the clip itself is blurred live on its TextureView; no static still.
@@ -3834,6 +3847,7 @@ fun NowPlayingScreen(
                     )
                 }
 
+                PlayerBoxSlice {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -6194,6 +6208,7 @@ Spacer(Modifier.width(12.dp))
                     }
                     }
                     }
+                }
                 }
             }
         }
