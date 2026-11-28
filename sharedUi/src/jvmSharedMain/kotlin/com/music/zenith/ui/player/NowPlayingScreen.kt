@@ -361,6 +361,9 @@ private val SPOTIFY_MINI_SCRUBBER_HEIGHT = 48.dp + SPOTIFY_MINI_SCRUBBER_LIFT
 /** Slot satu baris lirik di atas bar progres mini; hanya dipakai bila lirik strip aktif. */
 private val SPOTIFY_MINI_LYRIC_HEIGHT = 36.dp
 
+/** Jarak turun judul, artis, dan tombol untuk mengisi ruang kosong di atas lirik mini. */
+private val SPOTIFY_MINI_TITLE_DROP = 28.dp
+
 /** [image] selebar scope, rata atas, rasio aslinya tanpa crop; yang melewati tepi bawah terpotong. */
 private fun DrawScope.drawFrameTopAligned(image: ImageBitmap) {
     if (size.width <= 0f || size.height <= 0f) return
@@ -4311,9 +4314,10 @@ fun NowPlayingScreen(
                             val expandedTopHeight = spotifyCanvasExpandedTopHeight
                                 .takeIf { it > 0.dp }
                                 ?: maxHeight
+                            val miniTitleDrop = if (lyricStripEnabled) SPOTIFY_MINI_TITLE_DROP else 0.dp
                             val collapsedTitleTop = (
                                 expandedTopHeight + spotifyCanvasDeckHeight - HEADER_HEIGHT -
-                                    spotifyMiniHeight
+                                    spotifyMiniHeight + miniTitleDrop
                             ).coerceAtLeast(0.dp)
                             collapsedTitleTop
                         } else {
