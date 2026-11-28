@@ -1334,6 +1334,7 @@
     <string name="shelf_for_you">For you</string>
     <string name="shelf_shorts">Shorts</string>
     <string name="shelf_charts">Charts</string>
+    <string name="shelf_new_releases">New releases</string>
     <string name="source_needs_lossless_output">Needs a lossless output · use a lossless supported device</string>
     <string name="source_needs_lossless_bt_codec">Needs a lossless output · Bluetooth is on %1$s; use a lossless supported device</string>
     <string name="source_needs_lossless_bt_unknown">Needs a lossless output · can’t tell which Bluetooth codec is in use</string>

@@ -981,6 +981,7 @@
     <string name="brand_account">브랜드 계정</string>
     <string name="add_account">계정 추가</string>
     <string name="selected_account">선택한 계정</string>
+    <string name="shelf_new_releases">신규 발매</string>
     <string name="edit_profile">프로필 편집</string>
     <string name="profile_display_name">표시 이름</string>
     <string name="profile_change_photo">사진 변경</string>
