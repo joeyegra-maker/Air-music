@@ -413,62 +413,6 @@ object ZenithIcons {
         )
     }
 
-    /**
-     * Apple Music's repeat glyph (SF Symbol "repeat"): two strands with rounded
-     * corners, a solid arrow head on each, the top one pointing right and the
-     * bottom one left. With [one] the top strand stops short to leave room for
-     * the 1.
-     */
-    private fun repeatArrows(name: String, one: Boolean): ImageVector =
-        ImageVector.Builder(
-            name = name,
-            defaultWidth = 24.dp, defaultHeight = 24.dp,
-            viewportWidth = 24f, viewportHeight = 24f,
-        ).apply {
-            val topEnd = if (one) 9.0f else 16.0f
-            val headBase = if (one) 8.4f else 15.4f
-            val headTip = if (one) 12.4f else 19.4f
-            path(
-                stroke = stroke,
-                strokeLineWidth = STROKE,
-                strokeLineCap = StrokeCap.Round,
-                strokeLineJoin = StrokeJoin.Round,
-            ) {
-                // Top strand: up from the left, across to the right.
-                moveTo(4.6f, 12.4f)
-                lineTo(4.6f, 9.8f)
-                arcToRelative(2.4f, 2.4f, 0f, isMoreThanHalf = false, isPositiveArc = true, 2.4f, -2.4f)
-                lineTo(topEnd, 7.4f)
-                // Bottom strand: down from the right, back across to the left.
-                moveTo(19.4f, 11.6f)
-                lineTo(19.4f, 14.2f)
-                arcToRelative(2.4f, 2.4f, 0f, isMoreThanHalf = false, isPositiveArc = true, -2.4f, 2.4f)
-                lineTo(8.0f, 16.6f)
-            }
-            path(
-                fill = stroke,
-                stroke = stroke,
-                strokeLineWidth = 1.2f,
-                strokeLineCap = StrokeCap.Round,
-                strokeLineJoin = StrokeJoin.Round,
-            ) {
-                // Top arrow head, pointing right.
-                moveTo(headBase, 4.9f); lineTo(headTip, 7.4f); lineTo(headBase, 9.9f); close()
-                // Bottom arrow head, pointing left.
-                moveTo(8.6f, 14.1f); lineTo(4.6f, 16.6f); lineTo(8.6f, 19.1f); close()
-            }
-            if (one) {
-                path(
-                    stroke = stroke,
-                    strokeLineWidth = 1.9f,
-                    strokeLineCap = StrokeCap.Round,
-                    strokeLineJoin = StrokeJoin.Round,
-                ) {
-                    moveTo(16.8f, 5.8f); lineTo(19.4f, 4.0f); lineTo(19.4f, 10.6f)
-                }
-            }
-        }.build()
-
     /** Automix: a ring beside a record disc with a centre hole. */
     val Automix: ImageVector by lazy {
         ImageVector.Builder(

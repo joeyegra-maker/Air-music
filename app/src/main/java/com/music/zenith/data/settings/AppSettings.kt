@@ -2925,11 +2925,6 @@ object AppSettings {
         prefs.edit().putBoolean(KEY_SPOTIFY_CANVAS_AUTO_HIDE, value).apply()
     }
 
-    fun setPrioritizeSpotifyCanvas(value: Boolean) {
-        prioritizeSpotifyCanvas.value = value
-        prefs.edit().putBoolean(KEY_PRIORITIZE_SPOTIFY_CANVAS, value).apply()
-    }
-
     fun setCanvasProviderOrder(value: List<CanvasProvider>) {
         val order = CanvasProvider.ordered(value)
         canvasProviderOrder.value = order

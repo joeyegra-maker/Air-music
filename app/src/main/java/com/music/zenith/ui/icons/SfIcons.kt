@@ -34,7 +34,6 @@ import com.composables.sfsymbols.monochrome.SFDocumentOnDocument
 import com.composables.sfsymbols.monochrome.SFDotRadiowavesLeftAndRight
 import com.composables.sfsymbols.monochrome.SFDrop
 import com.composables.sfsymbols.monochrome.SFDropHalffull
-import com.composables.sfsymbols.monochrome.SFEllipsisCircle
 import com.composables.sfsymbols.monochrome.SFExclamationmarkCircle
 import com.composables.sfsymbols.monochrome.SFExclamationmarkTriangle
 import com.composables.sfsymbols.monochrome.SFEyeSlash
@@ -46,7 +45,6 @@ import com.composables.sfsymbols.monochrome.SFGlobe
 import com.composables.sfsymbols.monochrome.SFHandTap
 import com.composables.sfsymbols.monochrome.SFHeadphones
 import com.composables.sfsymbols.monochrome.SFHeart
-import com.composables.sfsymbols.monochrome.SFHeartFill
 import com.composables.sfsymbols.monochrome.SFHifispeaker
 import com.composables.sfsymbols.monochrome.SFIcloud
 import com.composables.sfsymbols.monochrome.SFIcloudSlash
@@ -70,7 +68,6 @@ import com.composables.sfsymbols.monochrome.SFPencil
 import com.composables.sfsymbols.monochrome.SFPencilTip
 import com.composables.sfsymbols.monochrome.SFPerson
 import com.composables.sfsymbols.monochrome.SFPerson2
-import com.composables.sfsymbols.monochrome.SFPerson2BadgeGearshape
 import com.composables.sfsymbols.monochrome.SFPersonCropCircle
 import com.composables.sfsymbols.monochrome.SFPersonCropCircleBadgePlus
 import com.composables.sfsymbols.monochrome.SFPersonCropCircleFill
@@ -176,8 +173,6 @@ object SfIcons {
     val Lock: ImageVector by lazy { bold(SfSymbols.Monochrome.SFLock) }
     val Login: ImageVector by lazy { bold(SfSymbols.Monochrome.SFArrowRightCircle) }
     val Logout: ImageVector by lazy { bold(SfSymbols.Monochrome.SFRectanglePortraitAndArrowRight) }
-    val ManageAccounts: ImageVector by lazy { bold(SfSymbols.Monochrome.SFPerson2BadgeGearshape) }
-    val Miscellaneous: ImageVector by lazy { bold(SfSymbols.Monochrome.SFEllipsisCircle) }
     val MotionPhotosOff: ImageVector by lazy { bold(SfSymbols.Monochrome.SFLivephotoSlash) }
     val MusicNote: ImageVector by lazy { bold(SfSymbols.Monochrome.SFMusicNote) }
     val MusicOff: ImageVector by lazy { bold(SfSymbols.Monochrome.SFMusicNoteSlash) }
@@ -217,7 +212,6 @@ object SfIcons {
     val Close: ImageVector by lazy { bold(SfSymbols.Monochrome.SFXmark) }
     val Downloaded: ImageVector by lazy { bold(SfSymbols.Monochrome.SFCheckmarkCircle) }
     val Heart: ImageVector by lazy { bold(SfSymbols.Monochrome.SFHeart) }
-    val HeartFill: ImageVector by lazy { bold(SfSymbols.Monochrome.SFHeartFill) }
     val Info: ImageVector by lazy { bold(SfSymbols.Monochrome.SFInfoCircle) }
     val Open: ImageVector by lazy { bold(SfSymbols.Monochrome.SFChevronRight) }
     val Pencil: ImageVector by lazy { bold(SfSymbols.Monochrome.SFPencil) }

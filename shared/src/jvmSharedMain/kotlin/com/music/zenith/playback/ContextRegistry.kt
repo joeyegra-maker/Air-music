@@ -285,17 +285,6 @@ class ContextRegistry(
         return result
     }
 
-    /** Adds a growth listener and returns its removal id. */
-    fun addGrowthListener(listener: (ContextSnapshot) -> Unit): Long = synchronized(lock) {
-        val id = nextListenerId++
-        growthListeners[id] = listener
-        id
-    }
-
-    fun removeGrowthListener(id: Long): Boolean = synchronized(lock) {
-        growthListeners.remove(id) != null
-    }
-
     /**
      * Claims the one available continuation request.
      *

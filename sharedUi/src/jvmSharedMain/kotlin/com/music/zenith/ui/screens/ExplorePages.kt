@@ -190,49 +190,6 @@ private fun ShortcutCard(
     }
 }
 
-private fun LazyListScope.shelfPageItems(
-    state: UiState<List<HomeShelf>>,
-    keyPrefix: String,
-    onRetry: () -> Unit,
-    onShelfItemClick: (ShelfItem, String) -> Unit,
-    onShelfItemLongPress: ((ShelfItem) -> Unit)?,
-    currentSong: Song?,
-    isPlaying: Boolean,
-) {
-    when (state) {
-        UiState.Loading -> feedSkeleton()
-        is UiState.Error -> item(key = "$keyPrefix-error") {
-            MessageState(
-                state.message,
-                actionLabel = stringResource(Res.string.retry),
-                onAction = onRetry,
-            )
-        }
-        is UiState.Success -> itemsIndexed(
-            state.data,
-            key = { index, shelf -> "$keyPrefix:$index:${shelf.title}" },
-        ) { _, shelf ->
-            if (shelf.layout == com.music.zenith.data.model.ShelfLayout.LIST) {
-                RecentShelf(
-                    shelf = shelf,
-                    onItemClick = { onShelfItemClick(it, shelf.title) },
-                    onItemLongPress = onShelfItemLongPress,
-                    currentSong = currentSong,
-                    isPlaying = isPlaying,
-                )
-            } else {
-                Shelf(
-                    shelf = shelf,
-                    onItemClick = { onShelfItemClick(it, shelf.title) },
-                    onItemLongPress = onShelfItemLongPress,
-                    currentSong = currentSong,
-                    isPlaying = isPlaying,
-                )
-            }
-        }
-    }
-}
-
 /**
  * Which New releases covers are playing their clip. Building a player blocks the
  * main thread and a decoder is not free, so only a few play at once; the rest

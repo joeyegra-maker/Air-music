@@ -54,23 +54,8 @@ internal class ShelfScrollFlow {
 
     /** Counts the moments a scroll (drag and fling) has come to rest; cards still mid-entrance settle on it. */
     var releases by mutableIntStateOf(0)
-
-    private var lastEntryNanos = 0L
-    private var wave = 0
-
-    /**
-     * Where a card coming in now stands among the ones that came in just
-     * before it: 0 for the first of a run, one more for each after it.
-     */
-    fun nextWaveSlot(): Int {
-        val now = System.nanoTime()
-        wave = if (now - lastEntryNanos > SHELF_WAVE_GAP_NANOS) 0 else wave + 1
-        lastEntryNanos = now
-        return wave
-    }
 }
 
-private const val SHELF_WAVE_GAP_NANOS = 280_000_000L
 private const val SHELF_STAGGER_SHRINK = 0.1f
 
 /** How far a card travels in from the right edge while its entrance follows the finger. */
