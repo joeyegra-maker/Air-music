@@ -2,6 +2,7 @@ package com.music.zenith.data
 
 import com.music.zenith.data.model.BrowseType
 import com.music.zenith.data.model.Song
+import com.music.zenith.data.model.normalizedArtistName
 import com.music.zenith.data.settings.LocalMusicSort
 import com.music.zenith.download.DownloadedCollection
 import com.music.zenith.download.Downloads
@@ -100,7 +101,7 @@ object LocalGroups {
         return when (group.kind) {
             ALBUM -> folderSongs.filter { it.albumName == group.name }.sortedForAlbum()
             FOLDER -> folderSongs.filter { it.directory() == group.name }.sortedByTitle()
-            else -> folderSongs.filter { it.artist == group.name }.sortedByTitle()
+            else -> folderSongs.filter { it.hasArtist(group.name) }.sortedByTitle()
         }
     }
 
@@ -164,8 +165,16 @@ object LocalGroups {
      * a picture of whoever made it, so the page opens on a placeholder.
      */
     fun artistsOf(folderId: String, songs: List<Song>): List<LocalGroup> =
-        songs.groupBy { it.artist }
-            .map { (name, group) -> artist(folderId, name, group) }
+        songs
+            .flatMap { song -> song.artistNames().map { name -> name to song } }
+            .groupBy { (name, _) -> normalizedArtistName(name) }
+            .values
+            .map { pairs ->
+                // One row per artist, drawn with the spelling most tracks use.
+                val name = pairs.groupingBy { it.first }.eachCount()
+                    .maxByOrNull { it.value }?.key ?: pairs.first().first
+                artist(folderId, name, pairs.map { it.second }.distinct())
+            }
             .sortedBy { it.title.lowercase(Locale.ROOT) }
 
     /**
@@ -227,6 +236,30 @@ object LocalGroups {
         type = BrowseType.PLAYLIST,
         songs = songs.sortedByTitle(),
     )
+
+    /** Every artist credited on a track; the raw credit when it can't be split. */
+    private fun Song.artistNames(): List<String> {
+        val names = splitArtistCredit(artist)
+        return if (names.isEmpty()) listOf(artist) else names
+    }
+
+    private fun Song.hasArtist(name: String): Boolean {
+        val wanted = normalizedArtistName(name)
+        return artistNames().any { normalizedArtistName(it) == wanted }
+    }
+
+    // Names that contain a separator themselves and must stay in one piece.
+    private val UNSPLITTABLE_CREDITS = setOf("tyler, the creator", "earth, wind & fire")
+
+    private val ARTIST_SEPARATOR = Regex(
+        """\s*,\s*|\s*;\s*|\s+[&＆]\s+|\s+(?:feat|ft)\.?\s+|\s+featuring\s+""",
+        RegexOption.IGNORE_CASE,
+    )
+
+    private fun splitArtistCredit(credit: String): List<String> {
+        if (normalizedArtistName(credit) in UNSPLITTABLE_CREDITS) return listOf(credit.trim())
+        return credit.split(ARTIST_SEPARATOR).map { it.trim() }.filter { it.isNotEmpty() }
+    }
 
     /** The directory a device file sits in, or null when its path isn't known. */
     private fun Song.directory(): String? =
