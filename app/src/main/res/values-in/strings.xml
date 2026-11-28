@@ -963,7 +963,9 @@
 
 
 
-    <string name="shelf_concerts">Konser</string>u">Playlist pilihan untuk Anda</string>helf_recommended_music_videos">Video musik yang direkomendasikan</string>string>
+    <string name="shelf_concerts">Konser</string>
+    <string name="shelf_featured_playlists_for_you">Playlist pilihan untuk Anda</string>
+    <string name="shelf_recommended_music_videos">Video musik yang direkomendasikan</string>
 
     <string name="sort_date_added_toggle">Tanggal ditambahkan</string>
 
