@@ -399,6 +399,8 @@ fun SongRow(
     popular: Boolean = false,
     /** Warna panel geser; null memakai warna tema. */
     swipeTint: Color? = null,
+    /** Warna bintang lagu populer; null memakai warna subtitle. */
+    popularTint: Color? = null,
 ) {
     SwipeToQueueBox(
         onSwipeToQueue = onSwipeToQueue,
@@ -424,6 +426,7 @@ fun SongRow(
             hideArtistOf = hideArtistOf,
             showDuration = showDuration,
             popular = popular,
+            popularTint = popularTint,
         )
     }
 }
@@ -825,6 +828,7 @@ private fun SongRowContent(
     hideArtistOf: String? = null,
     showDuration: Boolean = true,
     popular: Boolean = false,
+    popularTint: Color? = null,
 ) {
     val titleColor by animateColorAsState(
         targetValue = if (isCurrent && !searchPlayingStyle) activeTint else MaterialTheme.colorScheme.onBackground,
@@ -869,7 +873,7 @@ private fun SongRowContent(
                     Icon(
                         imageVector = ZenithIcons.StarFilled,
                         contentDescription = null,
-                        tint = subtitleColor.copy(alpha = 0.7f),
+                        tint = popularTint ?: subtitleColor.copy(alpha = 0.7f),
                         modifier = Modifier
                             .align(Alignment.CenterStart)
                             .offset(x = -(PAGE_GUTTER / 2) - 5.dp)

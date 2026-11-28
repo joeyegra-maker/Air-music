@@ -976,6 +976,7 @@ fun DetailScreen(
                             // what the filter — or a sort — left standing.
                             trackNumber = originalTrackNumbers[song.videoId].takeIf { numbered },
                             popular = numbered && song.videoId in popularIds,
+                            popularTint = albumLogo?.takeIf { isCatalogAlbumPage }?.let { LogoColors[it.imageUrl] },
                             subtitleColor = palette.onBackgroundVariant,
                             // Apple Music: no artist line when it is the album's own
                             // artist, and no per-row duration on an album.
